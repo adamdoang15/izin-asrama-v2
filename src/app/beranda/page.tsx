@@ -1,0 +1,94 @@
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import { auth } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
+import type { IzinRowWithUserJoin, IzinWithSantri, StatusIzin } from "@/lib/types";
+import { JENIS_IZIN_LABEL } from "@/lib/types";
+import IzinForm from "@/components/IzinForm";
+import StatusPill from "@/components/StatusPill";
+import AdminIzinRow from "@/components/AdminIzinRow";
+import { formatTanggalWaktu, jakartaDayRange } from "@/lib/format";
+import { syncScheduledIzinStatuses } from "@/lib/izin";
+import ReturnIzinButton from "@/components/ReturnIzinButton";
+
+const PAGE_SIZE = 20;
+
+type SearchParams = Promise<{ page?: string; status?: string; q?: string }>;
+
+export default async function BerandaPage({ searchParams }: { searchParams: SearchParams }) {
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+  return session.user.role === "PENGURUS"
+    ? <BerandaPengurus searchParams={searchParams} />
+    : <BerandaSantri userId={Number(session.user.id)} />;
+}
+
+async function BerandaSantri({ userId }: { userId: number }) {
+  await syncScheduledIzinStatuses();
+  const { data } = await supabase
+    .from("izin")
+    .select("*, approved_by_user:users!izin_approved_by_fkey(name)")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  const riwayat = (data ?? []) as IzinRowWithUserJoin[];
+  return <main className="flex-1 max-w-3xl mx-auto w-full px-6 py-8 space-y-8">
+    <section><h2 className="text-base font-semibold mb-1">Ajukan izin keluar</h2><p className="text-sm text-ink-soft mb-4">Pilih jenis izin, isi tujuan dan waktu, lalu tunggu persetujuan petugas.</p><IzinForm /></section>
+    <section><h2 className="text-base font-semibold mb-4">Riwayat pengajuan</h2>{riwayat.length === 0 ? <p className="text-sm text-ink-soft">Belum ada pengajuan izin.</p> : <ul className="space-y-3">{riwayat.map((izin) => {
+      const approver = izin.approved_by_user?.name ?? null;
+      return <li key={izin.id} className="rounded-md border border-line bg-paper-raised px-4 py-3.5">
+        <div className="flex items-start justify-between gap-4"><div className="min-w-0"><p className="text-xs text-teal">{JENIS_IZIN_LABEL[izin.jenis_izin]}</p><p className="text-sm font-medium mt-1 truncate">{izin.tujuan}</p><p className="text-sm text-ink-soft mt-0.5">{izin.alasan}</p><p className="text-xs text-ink-soft mt-2">Keluar: {formatTanggalWaktu(izin.tanggal_keluar)}</p><p className="text-xs text-ink-soft">Batas kembali: {formatTanggalWaktu(izin.perkiraan_kembali)}</p>{approver && <p className="text-xs text-sage mt-2">Disetujui oleh {approver} · {formatTanggalWaktu(izin.approved_at)}</p>}{izin.returned_at && <p className={`text-xs mt-1 ${izin.return_status === "TERLAMBAT" ? "text-clay" : "text-sage"}`}>Kembali: {formatTanggalWaktu(izin.returned_at)} · {izin.return_status === "TERLAMBAT" ? `Terlambat ${izin.late_minutes ?? 0} menit` : "Tepat waktu"}</p>}{izin.catatan_admin && <p className="text-xs text-ink-soft mt-2 border-t border-line pt-2">Catatan petugas: {izin.catatan_admin}</p>}</div><StatusPill status={izin.status} /></div>
+        {izin.status === "SEDANG_KELUAR" && <ReturnIzinButton id={izin.id} />}
+      </li>;
+    })}</ul>}</section>
+  </main>;
+}
+
+async function BerandaPengurus({ searchParams }: { searchParams: SearchParams }) {
+  const params = await searchParams;
+  const page = Math.max(1, Number(params.page ?? "1") || 1);
+  const status = params.status as StatusIzin | undefined;
+  const q = (params.q ?? "").trim();
+  const { start: dayStart, end: dayEnd } = jakartaDayRange();
+
+  await syncScheduledIzinStatuses();
+
+  const [countsResult, todayResult, listResult] = await Promise.all([
+    supabase.from("izin").select("status", { count: "exact", head: false }),
+    supabase.from("izin").select("*, users!izin_user_id_fkey(name, kamar), approved_by_user:users!izin_approved_by_fkey(name)").lt("tanggal_keluar", dayEnd).gt("perkiraan_kembali", dayStart).in("status", ["DISETUJUI", "SEDANG_KELUAR"]),
+    fetchPaged(page, status, q),
+  ]);
+
+  const counts = { MENUNGGU: 0, DISETUJUI: 0, SEDANG_KELUAR: 0, SUDAH_KEMBALI: 0, DITOLAK: 0 } as Record<string, number>;
+  for (const row of countsResult.data ?? []) if (row.status in counts) counts[row.status]++;
+  const todayRows = mapRows((todayResult.data ?? []) as IzinRowWithUserJoin[]);
+  const rows = mapRows((listResult.data ?? []) as IzinRowWithUserJoin[]);
+  const total = listResult.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  return <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-8 space-y-8">
+    <section><div className="flex items-end justify-between gap-4 mb-4"><div><h1 className="text-lg font-semibold">Dashboard petugas</h1><p className="text-sm text-ink-soft">Pantau pengajuan, gelara yang sedang keluar, dan kepulangan hari ini.</p></div></div>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3"><Stat label="Menunggu" value={counts.MENUNGGU} tone="amber"/><Stat label="Disetujui" value={counts.DISETUJUI} tone="sage"/><Stat label="Sedang keluar" value={counts.SEDANG_KELUAR} tone="teal"/><Stat label="Sudah kembali" value={counts.SUDAH_KEMBALI} tone="sage"/><Stat label="Ditolak" value={counts.DITOLAK} tone="clay"/></div>
+    </section>
+    <section><h2 className="text-base font-semibold mb-4">Keluar hari ini</h2>{todayRows.length === 0 ? <p className="text-sm text-ink-soft">Tidak ada gelara yang sedang/terjadwal keluar hari ini.</p> : <ul className="space-y-3">{todayRows.map(i => <AdminIzinRow key={i.id} izin={i}/>)}</ul>}</section>
+    <section><div className="flex items-center justify-between mb-4"><div><h2 className="text-base font-semibold">Semua pengajuan</h2><p className="text-xs text-ink-soft mt-1">{total} data ditemukan.</p></div></div>
+      <form method="get" className="grid grid-cols-1 sm:grid-cols-[1fr_180px_auto] gap-2 mb-4"><input name="q" defaultValue={q} placeholder="Cari nama gelara..." className="rounded-md border border-line bg-paper-raised px-3 py-2 text-sm"/><select name="status" defaultValue={status ?? ""} className="rounded-md border border-line bg-paper-raised px-3 py-2 text-sm"><option value="">Semua status</option>{["MENUNGGU","DISETUJUI","SEDANG_KELUAR","SUDAH_KEMBALI","DITOLAK"].map(s => <option key={s} value={s}>{s.replaceAll("_", " ")}</option>)}</select><button className="rounded-md bg-teal px-4 py-2 text-sm font-medium text-paper-raised">Filter</button></form>
+      {rows.length === 0 ? <p className="text-sm text-ink-soft">Belum ada data yang cocok.</p> : <ul className="space-y-3">{rows.map(i => <AdminIzinRow key={i.id} izin={i}/>)}</ul>}
+      <div className="flex items-center justify-between mt-5 text-sm"><Link className={page <= 1 ? "pointer-events-none opacity-40" : "text-teal"} href={buildUrl(page-1,status,q)}>← Sebelumnya</Link><span className="text-ink-soft">Halaman {page} / {totalPages}</span><Link className={page >= totalPages ? "pointer-events-none opacity-40" : "text-teal"} href={buildUrl(page+1,status,q)}>Berikutnya →</Link></div>
+    </section>
+  </main>;
+}
+
+async function fetchPaged(page: number, status?: StatusIzin, q?: string) {
+  let query = supabase.from("izin").select("*, users!izin_user_id_fkey(name, kamar), approved_by_user:users!izin_approved_by_fkey(name)", { count: "exact" }).order("created_at", { ascending: false }).range((page-1)*PAGE_SIZE, page*PAGE_SIZE-1);
+  if (status) query = query.eq("status", status);
+  if (q) {
+    const { data: users } = await supabase.from("users").select("id").ilike("name", `%${q}%`).eq("role", "SANTRI");
+    query = query.in("user_id", (users ?? []).map(u => u.id).length ? (users ?? []).map(u => u.id) : [-1]);
+  }
+  return query;
+}
+
+function mapRows(data: IzinRowWithUserJoin[]): IzinWithSantri[] { return data.map(row => ({ ...row, nama_santri: row.users?.name ?? "Tidak diketahui", kamar: row.users?.kamar ?? null, nama_penyetuju: row.approved_by_user?.name ?? null })); }
+function buildUrl(page: number, status?: string, q?: string) { const p = new URLSearchParams(); p.set("page", String(page)); if (status) p.set("status", status); if (q) p.set("q", q); return `/beranda?${p.toString()}`; }
+function Stat({label,value,tone}:{label:string;value:number;tone:string}) { return <div className="rounded-md border border-line bg-paper-raised px-4 py-3"><p className={`text-xl font-semibold ${tone === "amber" ? "text-amber" : tone === "clay" ? "text-clay" : tone === "teal" ? "text-teal" : "text-sage"}`}>{value}</p><p className="text-xs text-ink-soft mt-1">{label}</p></div>; }
