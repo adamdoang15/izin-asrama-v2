@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import type { IzinRowWithUserJoin, StatusIzin, JenisIzin } from "@/lib/types";
+import { sendNotificationToPengurus, sendNotificationToUser } from "@/services/notification.service";
 
 export async function syncScheduledIzinStatuses(): Promise<void> {
   const now = new Date().toISOString();
@@ -145,6 +146,13 @@ export async function createIzin(
     catatan: null,
   });
 
+  // Trigger push notification to all Pengurus asynchronously
+  sendNotificationToPengurus({
+    title: "Pengajuan Izin Baru",
+    body: `Ada pengajuan izin baru (${jenis_izin}) untuk alasan: ${alasan}`,
+    url: "/admin",
+  }).catch((err) => console.error("Gagal mengirim notifikasi pengajuan:", err));
+
   return {};
 }
 
@@ -165,6 +173,10 @@ export async function approveIzin(
   nextStatus: "DISETUJUI" | "SEDANG_KELUAR"
 ): Promise<{ error?: string }> {
   const now = new Date().toISOString();
+
+  // Get izin target user before update
+  const current = await getCurrentIzinStatus(id);
+
   const { error } = await supabase
     .from("izin")
     .update({
@@ -188,6 +200,14 @@ export async function approveIzin(
     catatan: null,
   });
 
+  if (current?.user_id) {
+    sendNotificationToUser(current.user_id, {
+      title: "Izin Disetujui",
+      body: "Pengajuan izin Anda telah disetujui oleh pengurus.",
+      url: "/beranda",
+    }).catch((err) => console.error("Gagal mengirim notifikasi persetujuan:", err));
+  }
+
   return {};
 }
 
@@ -197,6 +217,10 @@ export async function rejectIzin(
   catatan: string
 ): Promise<{ error?: string }> {
   const now = new Date().toISOString();
+
+  // Get izin target user before update
+  const current = await getCurrentIzinStatus(id);
+
   const { error } = await supabase
     .from("izin")
     .update({
@@ -219,6 +243,14 @@ export async function rejectIzin(
     new_status: "DITOLAK",
     catatan,
   });
+
+  if (current?.user_id) {
+    sendNotificationToUser(current.user_id, {
+      title: "Izin Ditolak",
+      body: `Pengajuan izin Anda ditolak. Catatan: ${catatan}`,
+      url: "/beranda",
+    }).catch((err) => console.error("Gagal mengirim notifikasi penolakan:", err));
+  }
 
   return {};
 }
