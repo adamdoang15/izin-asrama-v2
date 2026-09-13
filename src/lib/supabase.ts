@@ -1,4 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
+import { env } from "@/lib/env";
+import type { Database } from "@/types/database.types";
 
 /**
  * IMPORTANT: this client uses the Supabase *service role* key, which
@@ -11,16 +13,10 @@ import { createClient } from "@supabase/supabase-js";
  * the NextAuth Credentials provider in src/lib/auth.ts.
  */
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseServiceRoleKey) {
-  throw new Error(
-    "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables. " +
-      "Copy .env.example to .env.local and fill in your Supabase project credentials."
-  );
-}
-
-export const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
-  auth: { persistSession: false },
-});
+export const supabase = createClient<Database>(
+  env.SUPABASE_URL,
+  env.SUPABASE_SERVICE_ROLE_KEY,
+  {
+    auth: { persistSession: false },
+  }
+);

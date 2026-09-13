@@ -112,7 +112,7 @@ function Chart({ buckets }: { buckets: Bucket[] }) {
   );
 }
 
-export default function StatsLanding({ rows, totalSantri }: Props) {
+export default function StatsLanding({ rows }: Props) {
   const [period, setPeriod] = useState<Period>("HARIAN");
 
   const data = useMemo(() => {
@@ -126,12 +126,9 @@ export default function StatsLanding({ rows, totalSantri }: Props) {
         return { label: formatShortDate(key), count: rows.filter((r) => keyOf(r.tanggal_keluar) === key).length };
       });
     } else if (period === "MINGGUAN") {
-      // Split the current calendar month into its real weeks (1–7, 8–14,
-      // 15–21, 22–end) instead of a rolling 8-week window that didn't line
-      // up with the actual calendar.
       const p = parts(today);
       const year = Number(p.year);
-      const month = Number(p.month); // 1-indexed
+      const month = Number(p.month);
       const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
       const monthLabel = new Intl.DateTimeFormat("id-ID", { month: "short" }).format(
         new Date(Date.UTC(year, month - 1, 15))

@@ -3,9 +3,14 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
-import { syncScheduledIzinStatuses } from "@/lib/izin";
 import { wibInputToISOString } from "@/lib/format";
+import {
+  syncScheduledIzinStatuses,
+  checkActiveIzinConflict,
+  createIzin,
+  getCurrentIzinStatus,
+  markIzinReturned,
+} from "@/services/izin.service";
 
 const jenisIzinSchema = z.enum(["HARIAN", "MENGINAP", "REKREASI", "KELUARGA", "DARURAT"]);
 
@@ -41,9 +46,6 @@ export async function ajukanIzinAction(
 
   const { jenis_izin, tujuan, alasan } = parsed.data;
 
-  // Inputs are plain "YYYY-MM-DDTHH:mm" strings from <input type="datetime-local">
-  // with no timezone attached — treat them as WIB and convert to real UTC
-  // instants so times are stored and compared correctly everywhere.
   const tanggalKeluarISO = wibInputToISOString(parsed.data.tanggal_keluar);
   const perkiraanKembaliISO = wibInputToISOString(parsed.data.perkiraan_kembali);
   if (!tanggalKeluarISO || !perkiraanKembaliISO) {
@@ -64,41 +66,14 @@ export async function ajukanIzinAction(
 
   await syncScheduledIzinStatuses();
 
-  const { data: activeRequests, error: conflictError } = await supabase
-    .from("izin")
-    .select("id, tanggal_keluar, perkiraan_kembali, status")
-    .eq("user_id", Number(session.user.id))
-    .in("status", ["MENUNGGU", "DISETUJUI", "SEDANG_KELUAR"])
-    .lt("tanggal_keluar", perkiraanKembaliISO)
-    .gt("perkiraan_kembali", tanggalKeluarISO);
-
-  if (conflictError) return { error: `Gagal memeriksa jadwal izin: ${conflictError.message}` };
-  if ((activeRequests ?? []).length > 0) {
+  const conflict = await checkActiveIzinConflict(Number(session.user.id), tanggalKeluarISO, perkiraanKembaliISO);
+  if (conflict.error) return { error: conflict.error };
+  if (conflict.hasConflict) {
     return { error: "Kamu masih memiliki pengajuan/izin aktif pada rentang waktu tersebut." };
   }
 
-  const { data: inserted, error } = await supabase
-    .from("izin")
-    .insert({
-      user_id: Number(session.user.id),
-      jenis_izin,
-      alasan,
-      tujuan,
-      tanggal_keluar: tanggalKeluarISO,
-      perkiraan_kembali: perkiraanKembaliISO,
-    })
-    .select("id")
-    .single();
-
-  if (error) return { error: `Gagal menyimpan pengajuan: ${error.message}` };
-
-  await supabase.from("izin_logs").insert({
-    izin_id: inserted.id,
-    actor_id: Number(session.user.id),
-    action: "AJUKAN",
-    new_status: "MENUNGGU",
-    catatan: null,
-  });
+  const result = await createIzin(Number(session.user.id), jenis_izin, alasan, tujuan, tanggalKeluarISO, perkiraanKembaliISO);
+  if (result.error) return { error: result.error };
 
   revalidatePath("/beranda");
   return { success: true };
@@ -118,14 +93,8 @@ export async function tandaiKembaliAction(
 
   await syncScheduledIzinStatuses();
 
-  const { data: izin, error: fetchError } = await supabase
-    .from("izin")
-    .select("id, user_id, status, perkiraan_kembali, tanggal_keluar")
-    .eq("id", id.data)
-    .eq("user_id", Number(session.user.id))
-    .maybeSingle();
-
-  if (fetchError || !izin) return { error: "Izin tidak ditemukan." };
+  const izin = await getCurrentIzinStatus(id.data);
+  if (!izin || izin.user_id !== Number(session.user.id)) return { error: "Izin tidak ditemukan." };
   if (izin.status !== "SEDANG_KELUAR") return { error: "Izin ini belum berstatus sedang keluar." };
 
   const now = new Date();
@@ -135,29 +104,8 @@ export async function tandaiKembaliAction(
   const returnStatus = lateMinutes > 0 ? "TERLAMBAT" : "TEPAT_WAKTU";
   const returnedAt = now.toISOString();
 
-  const { error: updateError } = await supabase
-    .from("izin")
-    .update({
-      status: "SUDAH_KEMBALI",
-      returned_at: returnedAt,
-      return_status: returnStatus,
-      late_minutes: lateMinutes,
-      updated_at: returnedAt,
-    })
-    .eq("id", id.data)
-    .eq("user_id", Number(session.user.id))
-    .eq("status", "SEDANG_KELUAR");
-
-  if (updateError) return { error: `Gagal mencatat kepulangan: ${updateError.message}` };
-
-  await supabase.from("izin_logs").insert({
-    izin_id: id.data,
-    actor_id: Number(session.user.id),
-    action: "KEMBALI",
-    old_status: "SEDANG_KELUAR",
-    new_status: "SUDAH_KEMBALI",
-    catatan: returnStatus === "TERLAMBAT" ? `Terlambat ${lateMinutes} menit.` : "Kembali tepat waktu.",
-  });
+  const result = await markIzinReturned(id.data, Number(session.user.id), returnedAt, returnStatus, lateMinutes);
+  if (result.error) return { error: result.error };
 
   revalidatePath("/beranda");
   return { success: true };

@@ -4,7 +4,12 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
+import {
+  checkUsernameExists,
+  createUser,
+  updateUser,
+  toggleUserStatus,
+} from "@/services/user.service";
 
 async function requireAdmin() {
   const session = await auth();
@@ -21,10 +26,21 @@ export async function createAccountAction(_prev: AccountActionState, formData: F
   const parsed = createSchema.safeParse({ username: formData.get("username"), password: formData.get("password"), name: formData.get("name"), role: formData.get("role"), kamar: formData.get("kamar") || undefined });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
   const { username, password, name, role, kamar } = parsed.data;
-  const { data: existing } = await supabase.from("users").select("id").eq("username", username).maybeSingle();
-  if (existing) return { error: "Username sudah digunakan, pilih yang lain." };
-  const { error } = await supabase.from("users").insert({ username, password_hash: bcrypt.hashSync(password, 10), name, role, kamar: role === "SANTRI" ? kamar || null : null, is_active: true });
-  if (error) return { error: `Gagal membuat akun: ${error.message}` };
+
+  const exists = await checkUsernameExists(username);
+  if (exists) return { error: "Username sudah digunakan, pilih yang lain." };
+
+  const result = await createUser({
+    username,
+    password_hash: bcrypt.hashSync(password, 10),
+    name,
+    role,
+    kamar: role === "SANTRI" ? kamar || null : null,
+    is_active: true,
+  });
+
+  if (result.error) return { error: result.error };
+
   revalidatePath("/kelola-akun");
   return { success: true };
 }
@@ -37,10 +53,17 @@ export async function updateAccountAction(_prev: AccountActionState, formData: F
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
   const { id, name, kamar, password } = parsed.data;
   if (password && password.length < 6) return { error: "Kata sandi baru minimal 6 karakter." };
-  const payload: Record<string, unknown> = { name, kamar: kamar || null, updated_at: new Date().toISOString() };
+
+  const payload: { name: string; kamar: string | null; updated_at: string; password_hash?: string } = {
+    name,
+    kamar: kamar || null,
+    updated_at: new Date().toISOString(),
+  };
   if (password) payload.password_hash = bcrypt.hashSync(password, 10);
-  const { error } = await supabase.from("users").update(payload).eq("id", id);
-  if (error) return { error: `Gagal memperbarui akun: ${error.message}` };
+
+  const result = await updateUser(id, payload);
+  if (result.error) return { error: result.error };
+
   revalidatePath("/kelola-akun");
   return { success: true };
 }
@@ -51,8 +74,10 @@ export async function toggleAccountAction(_prev: AccountActionState, formData: F
   if (!id) return { error: "Akun tidak ditemukan." };
   if (String(id) === session.user.id) return { error: "Akun yang sedang digunakan tidak dapat dinonaktifkan." };
   const active = formData.get("active") === "true";
-  const { error } = await supabase.from("users").update({ is_active: !active, updated_at: new Date().toISOString() }).eq("id", id);
-  if (error) return { error: `Gagal mengubah status akun: ${error.message}` };
+
+  const result = await toggleUserStatus(id, !active);
+  if (result.error) return { error: result.error };
+
   revalidatePath("/kelola-akun");
   return { success: true };
 }
