@@ -1,15 +1,20 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
 import type { IzinRowWithUserJoin, IzinWithSantri, StatusIzin } from "@/lib/types";
 import { JENIS_IZIN_LABEL } from "@/lib/types";
 import IzinForm from "@/components/IzinForm";
 import StatusPill from "@/components/StatusPill";
 import AdminIzinRow from "@/components/AdminIzinRow";
 import { formatTanggalWaktu, jakartaDayRange } from "@/lib/format";
-import { syncScheduledIzinStatuses } from "@/lib/izin";
 import ReturnIzinButton from "@/components/ReturnIzinButton";
+import {
+  syncScheduledIzinStatuses,
+  getRiwayatIzinSantri,
+  getIzinCounts,
+  getIzinKeluarHariIni,
+  fetchPagedIzin,
+} from "@/services/izin.service";
 
 const PAGE_SIZE = 20;
 
@@ -25,13 +30,8 @@ export default async function BerandaPage({ searchParams }: { searchParams: Sear
 
 async function BerandaSantri({ userId }: { userId: number }) {
   await syncScheduledIzinStatuses();
-  const { data } = await supabase
-    .from("izin")
-    .select("*, approved_by_user:users!izin_approved_by_fkey(name)")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(50);
-  const riwayat = (data ?? []) as IzinRowWithUserJoin[];
+  const riwayat = await getRiwayatIzinSantri(userId);
+
   return <main className="flex-1 max-w-3xl mx-auto w-full px-6 py-8 space-y-8">
     <section><h2 className="text-base font-semibold mb-1">Ajukan izin keluar</h2><p className="text-sm text-ink-soft mb-4">Pilih jenis izin, isi tujuan dan waktu, lalu tunggu persetujuan petugas.</p><IzinForm /></section>
     <section><h2 className="text-base font-semibold mb-4">Riwayat pengajuan</h2>{riwayat.length === 0 ? <p className="text-sm text-ink-soft">Belum ada pengajuan izin.</p> : <ul className="space-y-3">{riwayat.map((izin) => {
@@ -53,22 +53,20 @@ async function BerandaPengurus({ searchParams }: { searchParams: SearchParams })
 
   await syncScheduledIzinStatuses();
 
-  const [countsResult, todayResult, listResult] = await Promise.all([
-    supabase.from("izin").select("status", { count: "exact", head: false }),
-    supabase.from("izin").select("*, users!izin_user_id_fkey(name, kamar), approved_by_user:users!izin_approved_by_fkey(name)").lt("tanggal_keluar", dayEnd).gt("perkiraan_kembali", dayStart).in("status", ["DISETUJUI", "SEDANG_KELUAR"]),
-    fetchPaged(page, status, q),
+  const [counts, todayRowsRaw, listResult] = await Promise.all([
+    getIzinCounts(),
+    getIzinKeluarHariIni(dayStart, dayEnd),
+    fetchPagedIzin(page, PAGE_SIZE, status, q),
   ]);
 
-  const counts = { MENUNGGU: 0, DISETUJUI: 0, SEDANG_KELUAR: 0, SUDAH_KEMBALI: 0, DITOLAK: 0 } as Record<string, number>;
-  for (const row of countsResult.data ?? []) if (row.status in counts) counts[row.status]++;
-  const todayRows = mapRows((todayResult.data ?? []) as IzinRowWithUserJoin[]);
-  const rows = mapRows((listResult.data ?? []) as IzinRowWithUserJoin[]);
-  const total = listResult.count ?? 0;
+  const todayRows = mapRows(todayRowsRaw);
+  const rows = mapRows(listResult.data);
+  const total = listResult.count;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-8 space-y-8">
     <section><div className="flex items-end justify-between gap-4 mb-4"><div><h1 className="text-lg font-semibold">Dashboard petugas</h1><p className="text-sm text-ink-soft">Pantau pengajuan, gelara yang sedang keluar, dan kepulangan hari ini.</p></div></div>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3"><Stat label="Menunggu" value={counts.MENUNGGU} tone="amber"/><Stat label="Disetujui" value={counts.DISETUJUI} tone="sage"/><Stat label="Sedang keluar" value={counts.SEDANG_KELUAR} tone="teal"/><Stat label="Sudah kembali" value={counts.SUDAH_KEMBALI} tone="sage"/><Stat label="Ditolak" value={counts.DITOLAK} tone="clay"/></div>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3"><Stat label="Menunggu" value={counts.MENUNGGU ?? 0} tone="amber"/><Stat label="Disetujui" value={counts.DISETUJUI ?? 0} tone="sage"/><Stat label="Sedang keluar" value={counts.SEDANG_KELUAR ?? 0} tone="teal"/><Stat label="Sudah kembali" value={counts.SUDAH_KEMBALI ?? 0} tone="sage"/><Stat label="Ditolak" value={counts.DITOLAK ?? 0} tone="clay"/></div>
     </section>
     <section><h2 className="text-base font-semibold mb-4">Keluar hari ini</h2>{todayRows.length === 0 ? <p className="text-sm text-ink-soft">Tidak ada gelara yang sedang/terjadwal keluar hari ini.</p> : <ul className="space-y-3">{todayRows.map(i => <AdminIzinRow key={i.id} izin={i}/>)}</ul>}</section>
     <section><div className="flex items-center justify-between mb-4"><div><h2 className="text-base font-semibold">Semua pengajuan</h2><p className="text-xs text-ink-soft mt-1">{total} data ditemukan.</p></div></div>
@@ -77,16 +75,6 @@ async function BerandaPengurus({ searchParams }: { searchParams: SearchParams })
       <div className="flex items-center justify-between mt-5 text-sm"><Link className={page <= 1 ? "pointer-events-none opacity-40" : "text-teal"} href={buildUrl(page-1,status,q)}>← Sebelumnya</Link><span className="text-ink-soft">Halaman {page} / {totalPages}</span><Link className={page >= totalPages ? "pointer-events-none opacity-40" : "text-teal"} href={buildUrl(page+1,status,q)}>Berikutnya →</Link></div>
     </section>
   </main>;
-}
-
-async function fetchPaged(page: number, status?: StatusIzin, q?: string) {
-  let query = supabase.from("izin").select("*, users!izin_user_id_fkey(name, kamar), approved_by_user:users!izin_approved_by_fkey(name)", { count: "exact" }).order("created_at", { ascending: false }).range((page-1)*PAGE_SIZE, page*PAGE_SIZE-1);
-  if (status) query = query.eq("status", status);
-  if (q) {
-    const { data: users } = await supabase.from("users").select("id").ilike("name", `%${q}%`).eq("role", "SANTRI");
-    query = query.in("user_id", (users ?? []).map(u => u.id).length ? (users ?? []).map(u => u.id) : [-1]);
-  }
-  return query;
 }
 
 function mapRows(data: IzinRowWithUserJoin[]): IzinWithSantri[] { return data.map(row => ({ ...row, nama_santri: row.users?.name ?? "Tidak diketahui", kamar: row.users?.kamar ?? null, nama_penyetuju: row.approved_by_user?.name ?? null })); }

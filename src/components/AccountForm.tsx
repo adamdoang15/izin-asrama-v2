@@ -19,12 +19,12 @@ export default function AccountForm() {
   useEffect(() => {
     if (state.success) {
       formRef.current?.reset();
-      setRole("SANTRI");
     }
   }, [state.success]);
 
   return (
     <form
+      key={state.success ? "success" : "idle"}
       ref={formRef}
       action={formAction}
       className="rounded-md border border-line bg-paper-raised p-4 space-y-4"
@@ -50,7 +50,7 @@ export default function AccountForm() {
           <select
             id="role"
             name="role"
-            value={role}
+            defaultValue={role}
             onChange={(e) => setRole(e.target.value as "SANTRI" | "PENGURUS")}
             className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-teal focus:ring-1 focus:ring-teal transition-colors"
           >
@@ -95,7 +95,7 @@ export default function AccountForm() {
       {role === "SANTRI" && (
         <div className="space-y-1.5">
           <label htmlFor="kamar" className="block text-sm font-medium">
-             Kamar
+            Kamar
           </label>
           <input
             id="kamar"

@@ -2,8 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { authConfig } from "@/auth.config";
-import { supabase } from "@/lib/supabase";
-import type { UserRow } from "@/lib/types";
+import { getUserByUsername } from "@/services/user.service";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
@@ -18,11 +17,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const password = credentials?.password as string | undefined;
         if (!username || !password) return null;
 
-        const { data: user } = await supabase
-          .from("users")
-          .select("*")
-          .eq("username", username).eq("is_active", true)
-          .maybeSingle<UserRow>();
+        const user = await getUserByUsername(username);
         if (!user) return null;
 
         const valid = bcrypt.compareSync(password, user.password_hash);
