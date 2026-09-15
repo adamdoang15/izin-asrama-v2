@@ -150,7 +150,7 @@ export async function createIzin(
   sendNotificationToPengurus({
     title: "Pengajuan Izin Baru",
     body: `Ada pengajuan izin baru (${jenis_izin}) untuk alasan: ${alasan}`,
-    url: "/admin",
+    url: "/beranda",
   }).catch((err) => console.error("Gagal mengirim notifikasi pengajuan:", err));
 
   return {};
@@ -296,7 +296,7 @@ export async function markIzinReturned(
   sendNotificationToPengurus({
     title: "Santri Sudah Kembali",
     body: `${santriName} telah kembali ke asrama (${statusText}).`,
-    url: "/admin",
+    url: "/beranda",
   }).catch((err) => console.error("Gagal mengirim notifikasi kepulangan:", err));
 
   return {};
