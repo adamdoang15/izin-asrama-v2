@@ -203,7 +203,7 @@ export async function approveIzin(
   if (current?.user_id) {
     sendNotificationToUser(current.user_id, {
       title: "Izin Disetujui",
-      body: "Pengajuan izin Anda telah disetujui oleh pengurus.",
+      body: "Pengajuan izin Anda telah disetujui oleh petugas.",
       url: "/beranda",
     }).catch((err) => console.error("Gagal mengirim notifikasi persetujuan:", err));
   }
