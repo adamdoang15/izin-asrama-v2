@@ -104,7 +104,14 @@ export async function tandaiKembaliAction(
   const returnStatus = lateMinutes > 0 ? "TERLAMBAT" : "TEPAT_WAKTU";
   const returnedAt = now.toISOString();
 
-  const result = await markIzinReturned(id.data, Number(session.user.id), returnedAt, returnStatus, lateMinutes);
+  const result = await markIzinReturned(
+    id.data,
+    Number(session.user.id),
+    returnedAt,
+    returnStatus,
+    lateMinutes,
+    session.user.name ?? "Santri"
+  );
   if (result.error) return { error: result.error };
 
   revalidatePath("/beranda");

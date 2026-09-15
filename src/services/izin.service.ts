@@ -260,7 +260,8 @@ export async function markIzinReturned(
   userId: number,
   returnedAt: string,
   returnStatus: "TEPAT_WAKTU" | "TERLAMBAT",
-  lateMinutes: number
+  lateMinutes: number,
+  santriName: string
 ): Promise<{ error?: string }> {
   const { error } = await supabase
     .from("izin")
@@ -285,6 +286,18 @@ export async function markIzinReturned(
     new_status: "SUDAH_KEMBALI",
     catatan: returnStatus === "TERLAMBAT" ? `Terlambat ${lateMinutes} menit.` : "Kembali tepat waktu.",
   });
+
+  // Trigger push notification to all Pengurus asynchronously
+  const statusText =
+    returnStatus === "TERLAMBAT"
+      ? `terlambat ${lateMinutes} menit`
+      : "tepat waktu";
+
+  sendNotificationToPengurus({
+    title: "Santri Sudah Kembali",
+    body: `${santriName} telah kembali ke asrama (${statusText}).`,
+    url: "/admin",
+  }).catch((err) => console.error("Gagal mengirim notifikasi kepulangan:", err));
 
   return {};
 }
