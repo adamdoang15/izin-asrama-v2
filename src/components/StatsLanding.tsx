@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 
 type Period = "HARIAN" | "MINGGUAN" | "BULANAN" | "TAHUNAN";
 type Row = {
@@ -251,6 +252,23 @@ export default function StatsLanding({ rows }: Props) {
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div className="rounded-xl bg-sage-soft p-4"><p className="text-xs text-ink-soft">Tepat waktu</p><p className="mt-1 text-xl font-semibold text-sage">{Math.max(data.returned - data.late, 0).toLocaleString("id-ID")}</p></div>
             <div className="rounded-xl bg-clay-soft p-4"><p className="text-xs text-ink-soft">Terlambat</p><p className="mt-1 text-xl font-semibold text-clay">{data.late.toLocaleString("id-ID")}</p></div>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-line bg-paper-raised p-5 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-semibold text-ink">Alur & SOP Perizinan Asrama</h2>
+              <p className="mt-1 text-xs text-ink-soft">
+                Pelajari alur pengajuan izin, kategori izin, dan ketentuan validasi radius kepulangan santri.
+              </p>
+            </div>
+            <Link
+              href="/panduan"
+              className="inline-flex shrink-0 items-center justify-center rounded-lg bg-teal-soft px-4 py-2 text-xs font-semibold text-teal transition-colors hover:bg-teal hover:text-paper-raised"
+            >
+              Lihat Panduan SOP →
+            </Link>
           </div>
         </div>
 
