@@ -1,59 +1,81 @@
-# Fitur: Validasi Radius Lokasi saat Absensi Kepulangan Santri
+# Planning: Perbaikan Halaman Publik ("/")
 
 ## Latar Belakang
 
-Saat ini, santri menandai dirinya sudah kembali ke asrama cukup dengan menekan tombol **"Saya sudah kembali"** (`ReturnIzinButton` → server action `tandaiKembaliAction` di `src/app/santri/actions.ts`). Tidak ada pengecekan apakah santri benar-benar sedang berada di lokasi asrama saat menekan tombol tersebut, sehingga santri bisa saja menandai "sudah kembali" padahal masih di luar.
+Dari hasil review UI/UX dan keamanan pada halaman publik ("/" — `PublicNav` + `StatsLanding`), ada 4 perbaikan yang perlu dikerjakan: caching data, kerapian tampilan grid statistik di layar kecil, metadata SEO & `robots.txt`, serta security headers dasar untuk aplikasi.
 
-## Tujuan
+Catatan: penyebutan "gelara" untuk santri di halaman publik **bukan typo**, itu istilah resmi yang dipakai di asrama ini. Jangan diubah — fokus perbaikan grid ini murni pada tata letak (layout), bukan teks/istilah.
 
-Menambahkan validasi lokasi (geofencing) sehingga aksi "Saya sudah kembali" **hanya berhasil jika posisi GPS santri berada dalam radius tertentu dari lokasi asrama**. Di luar radius tersebut, sistem harus menolak dan memberi pesan yang jelas.
+---
 
-## Ide Alur Kerja (High Level)
+## Task 1: Caching (Revalidate) Halaman Publik
 
-1. **Konfigurasi lokasi & radius asrama**
-   - Tentukan titik koordinat asrama (latitude & longitude) dan radius toleransi dalam meter.
-   - Untuk versi awal, cukup simpan sebagai environment variable (mengikuti pola `src/lib/env.ts`). Membuat UI pengaturan untuk pengurus bisa dilakukan belakangan sebagai peningkatan (lihat bagian "Opsional").
+**Masalah:** Halaman publik menjalankan query ke database setiap kali ada yang membuka "/", padahal halaman ini bisa diakses siapa saja tanpa login/rate limit — berisiko membebani database secara tidak perlu (termasuk dari bot/crawler).
 
-2. **Ambil lokasi perangkat santri di sisi client**
-   - Saat tombol "Saya sudah kembali" ditekan, minta lokasi perangkat menggunakan Geolocation API bawaan browser, sebelum form benar-benar dikirim ke server.
-   - Sertakan latitude & longitude tersebut sebagai data tambahan pada submit ke server action `tandaiKembaliAction`.
-   - Tangani dengan pesan yang ramah untuk kondisi: izin lokasi ditolak pengguna, browser/device tidak mendukung geolocation, atau proses pengambilan lokasi gagal/timeout.
+**Yang perlu dilakukan:**
+- Tambahkan mekanisme caching berbasis waktu (revalidate/ISR) pada halaman publik, sehingga query ke database tidak berjalan di setiap kunjungan, melainkan disegarkan secara berkala.
+- Tentukan durasi cache yang wajar — cukup singkat agar statistik tetap terasa "hidup", tapi cukup panjang untuk mengurangi beban database secara signifikan (didiskusikan/diputuskan saat implementasi, tidak harus presisi di awal).
 
-3. **Validasi jarak di sisi server (wajib, jangan hanya andalkan client)**
-   - Di alur `tandaiKembaliAction` (atau layer service terkait di `izin.service.ts`), hitung jarak antara koordinat yang dikirim santri dengan koordinat asrama.
-   - Bandingkan hasilnya dengan radius yang dikonfigurasi.
-   - Jika berada di luar radius → tolak proses, kembalikan pesan error yang informatif (misalnya menyebutkan bahwa lokasi berada di luar jangkauan asrama).
-   - Jika di dalam radius → lanjutkan proses seperti sekarang (update status ke `SUDAH_KEMBALI`, catat `izin_logs`, kirim notifikasi, dst).
+**File relevan:** `src/app/page.tsx`
 
-4. **Audit trail (disarankan)**
-   - Simpan koordinat dan/atau jarak yang tercatat saat santri menekan tombol kembali, sebagai kolom tambahan pada tabel `izin` atau `izin_logs`. Ini berguna bagi pengurus untuk verifikasi manual jika ada keraguan di kemudian hari.
+**Kriteria selesai:**
+- [ ] Halaman publik tidak lagi query database di setiap request; ada mekanisme revalidate yang jelas.
+- [ ] Statistik yang ditampilkan tetap wajar (tidak basi berlebihan) untuk kebutuhan pemantauan publik.
 
-5. **Pengalaman pengguna (UX)**
-   - Tampilkan status "sedang mengambil lokasi..." selagi menunggu GPS.
-   - Beri pesan yang jelas dan tidak teknis saat lokasi ditolak, tidak akurat, atau di luar radius.
-   - Perhatikan bahwa Geolocation API browser mensyaratkan koneksi HTTPS di production (Vercel sudah otomatis HTTPS, tapi perlu diperhatikan saat pengujian lokal).
+---
 
-## Bagian Kode yang Relevan (referensi awal, tidak wajib diikuti persis)
+## Task 2: Perbaikan Grid Statistik di Mobile
 
-- `src/components/ReturnIzinButton.tsx` — komponen tombol "Saya sudah kembali", tempat menambahkan logic pengambilan lokasi sebelum submit.
-- `src/app/santri/actions.ts` (`tandaiKembaliAction`) — tempat paling tepat untuk menambahkan validasi radius sebelum data disimpan.
-- `src/services/izin.service.ts` (`markIzinReturned`) — mungkin perlu disesuaikan agar bisa menerima & menyimpan data lokasi tambahan.
-- `supabase/schema.sql` dan `supabase/migration.sql` — tempat menambahkan kolom baru pada tabel `izin`/`izin_logs`, atau tabel pengaturan baru bila diperlukan.
-- `src/lib/env.ts` — tempat menambahkan environment variable untuk lokasi asrama & radius jika memakai pendekatan env var.
+**Masalah:** Ada 5 kartu statistik (`Total izin`, `Disetujui`, `Sedang keluar`, `Sudah kembali`, `Ditolak`) yang disusun dalam grid 2 kolom di layar mobile. Karena 5 tidak habis dibagi 2, satu kartu ("Ditolak") jadi sendirian di baris terakhir dan terlihat tidak rapi.
 
-## Kriteria Selesai (Acceptance Criteria)
+**Yang perlu dilakukan:**
+- Sesuaikan susunan kolom grid untuk berbagai ukuran layar (mobile, tablet, desktop) supaya kartu-kartu tersusun rapi dan seimbang, tanpa ada kartu yang "menggantung" sendirian.
+- Pastikan tampilan tetap enak dilihat di ukuran layar yang umum dipakai (HP kecil s/d desktop lebar).
+- Tidak perlu mengubah konten, urutan, atau istilah pada kartu — murni penyesuaian layout.
 
-- [ ] Santri tidak bisa berhasil menandai "sudah kembali" jika posisi GPS berada di luar radius yang ditentukan.
-- [ ] Validasi radius dilakukan di server, bukan hanya di sisi client.
-- [ ] Ada pesan error yang jelas untuk kasus: izin lokasi ditolak, lokasi gagal diambil, dan lokasi di luar radius.
-- [ ] Lokasi asrama & radius dapat dikonfigurasi tanpa mengubah logic inti (minimal lewat environment variable).
-- [ ] Alur "sudah kembali" yang sudah ada (update status, log, notifikasi ke pengurus) tetap berjalan normal ketika santri berada dalam radius.
+**File relevan:** `src/components/StatsLanding.tsx`
+
+**Kriteria selesai:**
+- [ ] Tidak ada kartu statistik yang berdiri sendiri di baris terakhir pada ukuran layar mobile umum.
+- [ ] Layout tetap terlihat rapi di ukuran layar mobile, tablet, dan desktop.
+
+---
+
+## Task 3: Metadata SEO + robots.txt
+
+**Masalah:** Halaman publik saat ini hanya memakai metadata umum dari layout utama aplikasi (title/description generik untuk seluruh app), belum ada metadata khusus untuk halaman ini. Belum ada juga keputusan/konfigurasi eksplisit soal apakah halaman ini boleh diindeks mesin pencari.
+
+**Yang perlu dilakukan:**
+- Tambahkan metadata yang lebih spesifik untuk halaman publik ini (judul, deskripsi, dan gambar/preview bila relevan), supaya tampil lebih informatif saat dibagikan lewat link (mis. ke wali santri lewat chat/WhatsApp).
+- Tentukan keputusan: apakah halaman ini memang ingin bisa ditemukan lewat mesin pencari (Google, dsb) atau tidak.
+- Berdasarkan keputusan itu, tambahkan `robots.txt` (dan `sitemap` bila memang ingin diindeks) yang sesuai.
+
+**File relevan:** `src/app/page.tsx` / `src/app/layout.tsx`, serta file `robots.txt`/`sitemap` baru di `src/app/`.
+
+**Kriteria selesai:**
+- [ ] Halaman publik punya metadata sendiri yang relevan (bukan cuma warisan dari layout global).
+- [ ] Ada keputusan eksplisit soal indexing, dituangkan dalam `robots.txt` (dan `sitemap` bila perlu).
+
+---
+
+## Task 4: Security Headers
+
+**Masalah:** Konfigurasi Next.js (`next.config.ts`) belum mengatur HTTP security headers dasar untuk aplikasi (mis. pencegahan clickjacking, MIME sniffing, kebijakan referrer, dsb).
+
+**Yang perlu dilakukan:**
+- Tambahkan konfigurasi HTTP security headers standar di level aplikasi (bukan hanya untuk halaman publik, tapi berlaku ke seluruh situs), mengikuti praktik umum untuk aplikasi Next.js.
+- Pastikan penambahan header ini tidak mengganggu fungsi yang sudah ada (login, push notification, dsb) — perlu dicoba/diuji setelah ditambahkan.
+
+**File relevan:** `next.config.ts`
+
+**Kriteria selesai:**
+- [ ] Ada security headers dasar yang aktif di seluruh aplikasi.
+- [ ] Fitur-fitur yang sudah berjalan (login, notifikasi push, dsb) tetap berfungsi normal setelah header ditambahkan.
+
+---
 
 ## Di Luar Cakupan (Non-goals)
 
-- Tidak melakukan tracking lokasi santri secara real-time/berkelanjutan, hanya saat menekan tombol kembali.
-- Tidak menerapkan validasi radius pada saat pengajuan izin keluar, hanya pada saat konfirmasi kepulangan.
-
-## Peningkatan Selanjutnya (Opsional, Tidak Wajib di Iterasi Pertama)
-
-- Halaman pengaturan untuk pengurus agar bisa mengubah lokasi asrama & radius toleransi langsung dari UI, tanpa perlu mengubah environment variable atau deploy ulang.
+- Tidak mengubah istilah/penyebutan yang sudah sesuai dengan konteks asrama (mis. "gelara").
+- Tidak membuat sistem caching yang kompleks (mis. cache layer terpisah/Redis) — cukup memanfaatkan mekanisme bawaan Next.js.
+- Tidak mengubah desain visual/konten statistik secara keseluruhan, hanya menyesuaikan layout grid yang bermasalah.

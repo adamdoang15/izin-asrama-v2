@@ -236,7 +236,7 @@ export default function StatsLanding({ rows }: Props) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 [&>:last-child]:col-span-2 sm:[&>:last-child]:col-span-1 md:[&>:last-child]:col-span-1">
           <StatCard label="Total izin" value={data.total} />
           <StatCard label="Disetujui" value={data.approved} />
           <StatCard label="Sedang keluar" value={data.active} />
