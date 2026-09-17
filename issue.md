@@ -1,81 +1,58 @@
-# Planning: Perbaikan Halaman Publik ("/")
+# Planning: Halaman SOP/Panduan Perizinan Asrama
 
 ## Latar Belakang
 
-Dari hasil review UI/UX dan keamanan pada halaman publik ("/" — `PublicNav` + `StatsLanding`), ada 4 perbaikan yang perlu dikerjakan: caching data, kerapian tampilan grid statistik di layar kecil, metadata SEO & `robots.txt`, serta security headers dasar untuk aplikasi.
+Halaman publik ("/") saat ini hanya menampilkan statistik izin, belum ada penjelasan alur/prosedur perizinan untuk santri maupun wali santri. Perlu dibuatkan halaman panduan (SOP) terpisah, plus teaser singkat di halaman "/" yang mengarahkan ke halaman tersebut.
 
-Catatan: penyebutan "gelara" untuk santri di halaman publik **bukan typo**, itu istilah resmi yang dipakai di asrama ini. Jangan diubah — fokus perbaikan grid ini murni pada tata letak (layout), bukan teks/istilah.
-
----
-
-## Task 1: Caching (Revalidate) Halaman Publik
-
-**Masalah:** Halaman publik menjalankan query ke database setiap kali ada yang membuka "/", padahal halaman ini bisa diakses siapa saja tanpa login/rate limit — berisiko membebani database secara tidak perlu (termasuk dari bot/crawler).
-
-**Yang perlu dilakukan:**
-- Tambahkan mekanisme caching berbasis waktu (revalidate/ISR) pada halaman publik, sehingga query ke database tidak berjalan di setiap kunjungan, melainkan disegarkan secara berkala.
-- Tentukan durasi cache yang wajar — cukup singkat agar statistik tetap terasa "hidup", tapi cukup panjang untuk mengurangi beban database secara signifikan (didiskusikan/diputuskan saat implementasi, tidak harus presisi di awal).
-
-**File relevan:** `src/app/page.tsx`
-
-**Kriteria selesai:**
-- [ ] Halaman publik tidak lagi query database di setiap request; ada mekanisme revalidate yang jelas.
-- [ ] Statistik yang ditampilkan tetap wajar (tidak basi berlebihan) untuk kebutuhan pemantauan publik.
+Catatan: **tidak perlu memasukkan informasi kontak** (nomor telepon/WA pengurus, dsb) pada iterasi ini.
 
 ---
 
-## Task 2: Perbaikan Grid Statistik di Mobile
+## Task 1: Halaman Panduan/SOP Baru
 
-**Masalah:** Ada 5 kartu statistik (`Total izin`, `Disetujui`, `Sedang keluar`, `Sudah kembali`, `Ditolak`) yang disusun dalam grid 2 kolom di layar mobile. Karena 5 tidak habis dibagi 2, satu kartu ("Ditolak") jadi sendirian di baris terakhir dan terlihat tidak rapi.
+**Tujuan:** Menyediakan halaman publik (tanpa login) yang menjelaskan alur dan aturan perizinan asrama secara lengkap, supaya santri dan wali santri paham prosesnya tanpa perlu bertanya langsung ke pengurus.
 
 **Yang perlu dilakukan:**
-- Sesuaikan susunan kolom grid untuk berbagai ukuran layar (mobile, tablet, desktop) supaya kartu-kartu tersusun rapi dan seimbang, tanpa ada kartu yang "menggantung" sendirian.
-- Pastikan tampilan tetap enak dilihat di ukuran layar yang umum dipakai (HP kecil s/d desktop lebar).
-- Tidak perlu mengubah konten, urutan, atau istilah pada kartu — murni penyesuaian layout.
+- Buat halaman baru dengan rute tersendiri (misal `/panduan`), terpisah dari halaman statistik "/", karena sifat kontennya berbeda (teks prosedural panjang vs ringkasan angka).
+- Susun isi panduan secara garis besar mencakup:
+  1. Alur pengajuan izin dari awal sampai akhir (mengajukan → menunggu persetujuan → disetujui/ditolak → keluar asrama → kembali), termasuk penjelasan singkat kenapa ada permintaan izin lokasi saat menandai kepulangan.
+  2. Jenis-jenis izin yang tersedia dan gambaran kapan masing-masing dipakai.
+  3. Ketentuan waktu kepulangan dan konsekuensi jika terlambat.
+  4. Pertanyaan umum (FAQ) seputar hal-hal yang sering membingungkan pengguna (misal soal izin akses lokasi, atau lupa menandai kembali).
+- Gunakan gaya penulisan yang mudah dipahami orang awam (bukan istilah teknis sistem), karena target pembacanya termasuk wali santri.
+- Pastikan halaman ini bisa diakses tanpa login, konsisten dengan sifat halaman publik lain di aplikasi.
 
-**File relevan:** `src/components/StatsLanding.tsx`
+**File/area relevan (referensi, tidak wajib diikuti persis):**
+- Folder rute baru di `src/app/panduan/` (mengikuti pola halaman publik `src/app/page.tsx`).
+- `src/components/PublicNav.tsx` — tambahkan link navigasi ke halaman panduan ini, terlihat baik oleh pengunjung yang belum maupun sudah login.
 
 **Kriteria selesai:**
-- [ ] Tidak ada kartu statistik yang berdiri sendiri di baris terakhir pada ukuran layar mobile umum.
-- [ ] Layout tetap terlihat rapi di ukuran layar mobile, tablet, dan desktop.
+- [ ] Ada halaman panduan yang bisa diakses tanpa login.
+- [ ] Isi panduan mencakup alur izin, jenis izin, ketentuan waktu, dan FAQ dasar.
+- [ ] Link ke halaman panduan tersedia di navigasi publik.
+- [ ] Tidak ada informasi kontak yang ditampilkan pada halaman ini.
 
 ---
 
-## Task 3: Metadata SEO + robots.txt
+## Task 2: Teaser Singkat di Halaman "/"
 
-**Masalah:** Halaman publik saat ini hanya memakai metadata umum dari layout utama aplikasi (title/description generik untuk seluruh app), belum ada metadata khusus untuk halaman ini. Belum ada juga keputusan/konfigurasi eksplisit soal apakah halaman ini boleh diindeks mesin pencari.
-
-**Yang perlu dilakukan:**
-- Tambahkan metadata yang lebih spesifik untuk halaman publik ini (judul, deskripsi, dan gambar/preview bila relevan), supaya tampil lebih informatif saat dibagikan lewat link (mis. ke wali santri lewat chat/WhatsApp).
-- Tentukan keputusan: apakah halaman ini memang ingin bisa ditemukan lewat mesin pencari (Google, dsb) atau tidak.
-- Berdasarkan keputusan itu, tambahkan `robots.txt` (dan `sitemap` bila memang ingin diindeks) yang sesuai.
-
-**File relevan:** `src/app/page.tsx` / `src/app/layout.tsx`, serta file `robots.txt`/`sitemap` baru di `src/app/`.
-
-**Kriteria selesai:**
-- [ ] Halaman publik punya metadata sendiri yang relevan (bukan cuma warisan dari layout global).
-- [ ] Ada keputusan eksplisit soal indexing, dituangkan dalam `robots.txt` (dan `sitemap` bila perlu).
-
----
-
-## Task 4: Security Headers
-
-**Masalah:** Konfigurasi Next.js (`next.config.ts`) belum mengatur HTTP security headers dasar untuk aplikasi (mis. pencegahan clickjacking, MIME sniffing, kebijakan referrer, dsb).
+**Tujuan:** Memberi pengunjung halaman statistik ("/") gambaran singkat soal alur perizinan, tanpa membuat halaman tersebut penuh dengan teks panjang.
 
 **Yang perlu dilakukan:**
-- Tambahkan konfigurasi HTTP security headers standar di level aplikasi (bukan hanya untuk halaman publik, tapi berlaku ke seluruh situs), mengikuti praktik umum untuk aplikasi Next.js.
-- Pastikan penambahan header ini tidak mengganggu fungsi yang sudah ada (login, push notification, dsb) — perlu dicoba/diuji setelah ditambahkan.
+- Tambahkan satu bagian ringkas (beberapa poin saja, bukan penjelasan lengkap) di halaman "/" yang merangkum inti alur perizinan.
+- Sertakan tombol/link yang mengarah ke halaman panduan lengkap (`/panduan`) hasil Task 1.
+- Pastikan section ini tidak mengganggu tata letak statistik yang sudah ada, ditempatkan secara wajar (misal di bagian bawah halaman).
 
-**File relevan:** `next.config.ts`
+**File relevan:** `src/app/page.tsx` (dan/atau komponen baru untuk section ini bila dianggap perlu dipisah agar rapi).
 
 **Kriteria selesai:**
-- [ ] Ada security headers dasar yang aktif di seluruh aplikasi.
-- [ ] Fitur-fitur yang sudah berjalan (login, notifikasi push, dsb) tetap berfungsi normal setelah header ditambahkan.
+- [ ] Ada section ringkas di halaman "/" yang mengarahkan pengunjung ke halaman panduan lengkap.
+- [ ] Section ini tidak mengubah/merusak tampilan statistik yang sudah ada.
 
 ---
 
 ## Di Luar Cakupan (Non-goals)
 
-- Tidak mengubah istilah/penyebutan yang sudah sesuai dengan konteks asrama (mis. "gelara").
-- Tidak membuat sistem caching yang kompleks (mis. cache layer terpisah/Redis) — cukup memanfaatkan mekanisme bawaan Next.js.
-- Tidak mengubah desain visual/konten statistik secara keseluruhan, hanya menyesuaikan layout grid yang bermasalah.
+- Tidak menampilkan informasi kontak (telepon/WA/email pengurus) di halaman panduan maupun teaser.
+- Tidak membuat fitur pencarian/filter di dalam halaman panduan pada iterasi ini.
+- Tidak membuat sistem manajemen konten (CMS) untuk mengedit isi panduan lewat UI — cukup konten statis di kode terlebih dahulu.

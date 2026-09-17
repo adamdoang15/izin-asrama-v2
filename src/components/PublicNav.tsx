@@ -1,4 +1,3 @@
-
 import Link from "next/link";
 import { auth, signOut } from "@/lib/auth";
 
@@ -28,6 +27,13 @@ export default async function PublicNav() {
         {session?.user ? (
           <nav className="flex items-center gap-5">
             <Link
+              href="/panduan"
+              className="text-sm text-ink-soft hover:text-ink transition-colors"
+            >
+              Panduan SOP
+            </Link>
+
+            <Link
               href="/beranda"
               className="text-sm text-ink-soft hover:text-ink transition-colors"
             >
@@ -49,12 +55,20 @@ export default async function PublicNav() {
             </form>
           </nav>
         ) : (
-          <Link
-            href="/login"
-            className="text-sm font-medium text-paper-raised bg-teal px-4 py-2 rounded-md hover:opacity-90 transition-opacity"
-          >
-            Masuk
-          </Link>
+          <div className="flex items-center gap-5">
+            <Link
+              href="/panduan"
+              className="text-sm text-ink-soft hover:text-ink transition-colors"
+            >
+              Panduan SOP
+            </Link>
+            <Link
+              href="/login"
+              className="text-sm font-medium text-paper-raised bg-teal px-4 py-2 rounded-md hover:opacity-90 transition-opacity"
+            >
+              Masuk
+            </Link>
+          </div>
         )}
       </div>
     </header>
