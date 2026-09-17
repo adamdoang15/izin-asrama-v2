@@ -33,27 +33,27 @@ export default function PanduanPage() {
 
   const jenisIzin = [
     {
-      nama: "Harian",
+      nama: "",
       badge: "HARIAN",
       desc: "Izin keluar untuk keperluan kurang dari 2 jam (misal: beli perlengkapan, jajan, laundry, dll) tanpa menginap.",
     },
     {
-      nama: "Menginap",
+      nama: "",
       badge: "MENGINAP",
       desc: "Izin pulang ke rumah atau menginap di luar asrama untuk  hari libur resmi asrama atau pengajuan dari orang tua.",
     },
     {
-      nama: "Rekreasi",
+      nama: "",
       badge: "REKREASI",
       desc: "Izin untuk kegiatan pribadi seperti keluar untuk berolahraga, mengunjungi perpustakaan, atau kegiatan pribadi lainnya yang lebih dari 2 jam.",
     },
     {
-      nama: "Keluarga",
+      nama: "",
       badge: "KELUARGA",
       desc: "Izin khusus untuk acara atau urusan penting bersama keluarga.",
     },
     {
-      nama: "Darurat",
+      nama: "",
       badge: "DARURAT",
       desc: "Izin mendadak untuk keperluan medis atau duka cita keluarga yang memerlukan penanganan cepat.",
     },
