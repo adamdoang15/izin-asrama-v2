@@ -8,6 +8,9 @@ const envSchema = z.object({
   NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().optional(),
   VAPID_PRIVATE_KEY: z.string().optional(),
   VAPID_SUBJECT: z.string().optional().default("mailto:admin@asrama.com"),
+  ASRAMA_LAT: z.string().optional(),
+  ASRAMA_LNG: z.string().optional(),
+  ASRAMA_RADIUS_METERS: z.string().optional(),
 });
 
 const _env = envSchema.safeParse({
@@ -16,6 +19,9 @@ const _env = envSchema.safeParse({
   NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
   VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
   VAPID_SUBJECT: process.env.VAPID_SUBJECT,
+  ASRAMA_LAT: process.env.ASRAMA_LAT || process.env.NEXT_PUBLIC_ASRAMA_LAT,
+  ASRAMA_LNG: process.env.ASRAMA_LNG || process.env.NEXT_PUBLIC_ASRAMA_LNG,
+  ASRAMA_RADIUS_METERS: process.env.ASRAMA_RADIUS_METERS || process.env.NEXT_PUBLIC_ASRAMA_RADIUS_METERS,
 });
 
 if (!_env.success) {
