@@ -1,11 +1,21 @@
+import type { Metadata } from "next";
 import PublicNav from "@/components/PublicNav";
 import StatsLanding from "@/components/StatsLanding";
 import { supabase } from "@/lib/supabase";
 
+export const revalidate = 300; // Cache selama 5 menit (ISR)
+
+export const metadata: Metadata = {
+  title: "Statistik Perizinan Santri | Izin Asrama",
+  description: "Halaman publik statistik perizinan santri secara real-time.",
+  openGraph: {
+    title: "Statistik Perizinan Santri | Izin Asrama",
+    description: "Halaman publik statistik perizinan santri secara real-time.",
+  },
+};
+
 export default async function LandingPage() {
-  // Only pull the last 5 years of history, capped at 5000 rows. The old
-  // query fetched every izin row ever created on every single visit, so
-  // this page kept getting slower as the table grew.
+  // Only pull the last 5 years of history, capped at 5000 rows.
   const fiveYearsAgo = new Date();
   fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
 
