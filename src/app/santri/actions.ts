@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { wibInputToISOString } from "@/lib/format";
+import { getDistanceInMeters, getAsramaConfig } from "@/lib/geo";
 import {
   syncScheduledIzinStatuses,
   checkActiveIzinConflict,
@@ -91,6 +92,29 @@ export async function tandaiKembaliAction(
   const id = z.coerce.number().int().positive().safeParse(formData.get("id"));
   if (!id.success) return { error: "Izin tidak ditemukan." };
 
+  const latRaw = formData.get("latitude");
+  const lngRaw = formData.get("longitude");
+
+  if (!latRaw || !lngRaw) {
+    return { error: "Lokasi GPS diperlukan untuk mencatat kepulangan. Pastikan izin lokasi aktif." };
+  }
+
+  const userLat = Number(latRaw);
+  const userLng = Number(lngRaw);
+
+  if (Number.isNaN(userLat) || Number.isNaN(userLng)) {
+    return { error: "Format koordinat lokasi tidak valid." };
+  }
+
+  const asrama = getAsramaConfig();
+  const distance = getDistanceInMeters(userLat, userLng, asrama.lat, asrama.lng);
+
+  if (distance > asrama.radiusMeters) {
+    return {
+      error: `Gagal mencatat kepulangan. Anda berada di luar radius asrama (jarak: ${distance} meter, batas radius: ${asrama.radiusMeters} meter).`,
+    };
+  }
+
   await syncScheduledIzinStatuses();
 
   const izin = await getCurrentIzinStatus(id.data);
@@ -110,7 +134,8 @@ export async function tandaiKembaliAction(
     returnedAt,
     returnStatus,
     lateMinutes,
-    session.user.name ?? "Santri"
+    session.user.name ?? "Santri",
+    { latitude: userLat, longitude: userLng, distance }
   );
   if (result.error) return { error: result.error };
 

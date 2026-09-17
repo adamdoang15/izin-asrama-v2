@@ -261,7 +261,8 @@ export async function markIzinReturned(
   returnedAt: string,
   returnStatus: "TEPAT_WAKTU" | "TERLAMBAT",
   lateMinutes: number,
-  santriName: string
+  santriName: string,
+  locationInfo?: { latitude: number; longitude: number; distance: number }
 ): Promise<{ error?: string }> {
   const { error } = await supabase
     .from("izin")
@@ -278,13 +279,18 @@ export async function markIzinReturned(
 
   if (error) return { error: `Gagal mencatat kepulangan: ${error.message}` };
 
+  const statusCatatan = returnStatus === "TERLAMBAT" ? `Terlambat ${lateMinutes} menit.` : "Kembali tepat waktu.";
+  const locationCatatan = locationInfo
+    ? ` [Lokasi GPS: ${locationInfo.latitude.toFixed(6)}, ${locationInfo.longitude.toFixed(6)} (Jarak: ${locationInfo.distance}m)]`
+    : "";
+
   await supabase.from("izin_logs").insert({
     izin_id: id,
     actor_id: userId,
     action: "KEMBALI",
     old_status: "SEDANG_KELUAR",
     new_status: "SUDAH_KEMBALI",
-    catatan: returnStatus === "TERLAMBAT" ? `Terlambat ${lateMinutes} menit.` : "Kembali tepat waktu.",
+    catatan: `${statusCatatan}${locationCatatan}`,
   });
 
   // Trigger push notification to all Pengurus asynchronously
