@@ -125,15 +125,15 @@ export default function PanduanPage() {
               {jenisIzin.map((item) => (
                 <div
                   key={item.badge}
-                  className="flex flex-col gap-2 rounded-xl border border-line bg-paper-raised p-4 sm:flex-row sm:items-center sm:justify-between"
+                  className="rounded-xl border border-line bg-paper-raised p-4 sm:flex sm:items-start sm:gap-6"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 sm:w-44 shrink-0">
                     <span className="rounded-md bg-teal-soft px-2.5 py-1 text-xs font-semibold text-teal">
                       {item.badge}
                     </span>
                     <h3 className="font-medium text-ink">{item.nama}</h3>
                   </div>
-                  <p className="text-xs text-ink-soft sm:max-w-md">{item.desc}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-ink-soft sm:mt-0 flex-1">{item.desc}</p>
                 </div>
               ))}
             </div>
