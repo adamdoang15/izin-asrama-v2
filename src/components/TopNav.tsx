@@ -67,7 +67,7 @@ export default async function TopNav() {
           name={name ?? "Pengguna"}
           subtitle={subtitle}
           showSearch={isPengurus}
-          pengaturanHref="/pengaturan"
+          pengaturanHref={!isPengurus ? "/pengaturan" : undefined}
           kelolaAkunHref={isPengurus ? "/kelola-akun" : undefined}
           onSignOut={handleSignOut}
         />
