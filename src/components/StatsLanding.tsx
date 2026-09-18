@@ -272,7 +272,7 @@ export default function StatsLanding({ rows }: Props) {
           </div>
         </div>
 
-        <p className="mt-6 text-center text-xs text-ink-soft">Statistik diperbarui saat halaman dimuat. Data pribadi gelara tidak ditampilkan pada halaman publik.</p>
+        <p className="mt-6 text-center text-xs text-ink-soft">Statistik diperbarui saat halaman dimuat.</p>
       </section>
     </main>
   );
