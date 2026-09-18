@@ -1,58 +1,61 @@
-# Planning: Halaman SOP/Panduan Perizinan Asrama
+# Planning: Fitur Ganti Kata Sandi Sendiri (Santri)
 
 ## Latar Belakang
 
-Halaman publik ("/") saat ini hanya menampilkan statistik izin, belum ada penjelasan alur/prosedur perizinan untuk santri maupun wali santri. Perlu dibuatkan halaman panduan (SOP) terpisah, plus teaser singkat di halaman "/" yang mengarahkan ke halaman tersebut.
+Saat ini, kata sandi santri hanya bisa direset oleh pengurus lewat halaman `kelola-akun` (`updateAccountAction`), tanpa perlu tahu password lama. Perlu ditambahkan fitur agar santri (dan idealnya juga pengurus) bisa mengganti kata sandi mereka sendiri secara mandiri, tanpa melibatkan admin setiap kali.
 
-Catatan: **tidak perlu memasukkan informasi kontak** (nomor telepon/WA pengurus, dsb) pada iterasi ini.
+Fitur ini berbeda dari reset password oleh admin: karena dilakukan sendiri oleh pemilik akun, **wajib memverifikasi password lama** terlebih dahulu sebelum password baru diterapkan, sebagai lapisan keamanan.
 
 ---
 
-## Task 1: Halaman Panduan/SOP Baru
+## Task 1: Halaman/Section "Pengaturan Akun"
 
-**Tujuan:** Menyediakan halaman publik (tanpa login) yang menjelaskan alur dan aturan perizinan asrama secara lengkap, supaya santri dan wali santri paham prosesnya tanpa perlu bertanya langsung ke pengurus.
+**Tujuan:** Menyediakan tempat bagi pengguna yang sudah login (santri maupun pengurus) untuk mengelola akunnya sendiri, dimulai dari ganti kata sandi.
 
 **Yang perlu dilakukan:**
-- Buat halaman baru dengan rute tersendiri (misal `/panduan`), terpisah dari halaman statistik "/", karena sifat kontennya berbeda (teks prosedural panjang vs ringkasan angka).
-- Susun isi panduan secara garis besar mencakup:
-  1. Alur pengajuan izin dari awal sampai akhir (mengajukan → menunggu persetujuan → disetujui/ditolak → keluar asrama → kembali), termasuk penjelasan singkat kenapa ada permintaan izin lokasi saat menandai kepulangan.
-  2. Jenis-jenis izin yang tersedia dan gambaran kapan masing-masing dipakai.
-  3. Ketentuan waktu kepulangan dan konsekuensi jika terlambat.
-  4. Pertanyaan umum (FAQ) seputar hal-hal yang sering membingungkan pengguna (misal soal izin akses lokasi, atau lupa menandai kembali).
-- Gunakan gaya penulisan yang mudah dipahami orang awam (bukan istilah teknis sistem), karena target pembacanya termasuk wali santri.
-- Pastikan halaman ini bisa diakses tanpa login, konsisten dengan sifat halaman publik lain di aplikasi.
+- Buat halaman baru khusus untuk pengaturan akun pribadi (misalnya `/pengaturan`), terpisah dari halaman `kelola-akun` yang memang khusus untuk pengurus mengelola akun orang lain.
+- Halaman ini hanya bisa diakses oleh pengguna yang sudah login (mengikuti pola proteksi yang sudah ada untuk halaman `beranda`).
+- Sediakan form sederhana berisi: password lama, password baru, dan konfirmasi password baru.
+- Tambahkan link/menu ke halaman ini dari tempat yang mudah dijangkau pengguna yang sudah login (misalnya dari halaman `beranda`).
 
 **File/area relevan (referensi, tidak wajib diikuti persis):**
-- Folder rute baru di `src/app/panduan/` (mengikuti pola halaman publik `src/app/page.tsx`).
-- `src/components/PublicNav.tsx` — tambahkan link navigasi ke halaman panduan ini, terlihat baik oleh pengunjung yang belum maupun sudah login.
+- Folder rute baru `src/app/pengaturan/` (ikuti pola proteksi & struktur `src/app/beranda/`).
+- `src/lib/auth.ts` — untuk memastikan hanya pengguna yang login yang bisa akses.
 
 **Kriteria selesai:**
-- [ ] Ada halaman panduan yang bisa diakses tanpa login.
-- [ ] Isi panduan mencakup alur izin, jenis izin, ketentuan waktu, dan FAQ dasar.
-- [ ] Link ke halaman panduan tersedia di navigasi publik.
-- [ ] Tidak ada informasi kontak yang ditampilkan pada halaman ini.
+- [ ] Ada halaman pengaturan akun yang hanya bisa diakses saat sudah login.
+- [ ] Formulir ganti kata sandi tersedia dan mudah ditemukan dari halaman utama pengguna.
 
 ---
 
-## Task 2: Teaser Singkat di Halaman "/"
+## Task 2: Logic Ganti Kata Sandi (Server-side)
 
-**Tujuan:** Memberi pengunjung halaman statistik ("/") gambaran singkat soal alur perizinan, tanpa membuat halaman tersebut penuh dengan teks panjang.
+**Tujuan:** Memastikan proses ganti kata sandi aman — hanya berhasil jika pengguna benar-benar tahu kata sandi lamanya.
 
 **Yang perlu dilakukan:**
-- Tambahkan satu bagian ringkas (beberapa poin saja, bukan penjelasan lengkap) di halaman "/" yang merangkum inti alur perizinan.
-- Sertakan tombol/link yang mengarah ke halaman panduan lengkap (`/panduan`) hasil Task 1.
-- Pastikan section ini tidak mengganggu tata letak statistik yang sudah ada, ditempatkan secara wajar (misal di bagian bawah halaman).
+- Buat server action baru khusus untuk ganti kata sandi sendiri (terpisah dari `updateAccountAction` milik admin, karena aturan validasinya berbeda).
+- Alur validasi:
+  1. Ambil data pengguna yang sedang login dari sesi (bukan dari input form, supaya tidak bisa mengganti password akun orang lain).
+  2. Cocokkan password lama yang diinput dengan `password_hash` yang tersimpan.
+  3. Jika tidak cocok, tolak dengan pesan error yang jelas.
+  4. Jika cocok, validasi password baru (minimal panjang karakter, sebaiknya samakan aturannya dengan yang sudah dipakai di `kelola-akun`), lalu simpan sebagai hash baru menggunakan mekanisme hashing yang sama seperti sekarang (`bcrypt`).
+- Setelah berhasil, tampilkan konfirmasi sukses ke pengguna.
 
-**File relevan:** `src/app/page.tsx` (dan/atau komponen baru untuk section ini bila dianggap perlu dipisah agar rapi).
+**File/area relevan (referensi, tidak wajib diikuti persis):**
+- `src/app/pengaturan/actions.ts` (baru) — logic server action ganti password.
+- `src/services/user.service.ts` (`updateUser`) — bisa dipakai ulang untuk menyimpan `password_hash` baru.
+- `src/app/kelola-akun/actions.ts` — jadikan referensi pola validasi & hashing password yang sudah ada.
 
 **Kriteria selesai:**
-- [ ] Ada section ringkas di halaman "/" yang mengarahkan pengunjung ke halaman panduan lengkap.
-- [ ] Section ini tidak mengubah/merusak tampilan statistik yang sudah ada.
+- [ ] Password baru hanya bisa disimpan jika password lama yang diinput benar.
+- [ ] Pengguna tidak bisa mengganti password akun lain (hanya password milik sesi yang sedang login).
+- [ ] Ada pesan error yang jelas untuk kasus: password lama salah, password baru terlalu pendek, atau konfirmasi password tidak cocok.
+- [ ] Ada pesan sukses setelah password berhasil diganti.
 
 ---
 
 ## Di Luar Cakupan (Non-goals)
 
-- Tidak menampilkan informasi kontak (telepon/WA/email pengurus) di halaman panduan maupun teaser.
-- Tidak membuat fitur pencarian/filter di dalam halaman panduan pada iterasi ini.
-- Tidak membuat sistem manajemen konten (CMS) untuk mengedit isi panduan lewat UI — cukup konten statis di kode terlebih dahulu.
+- Tidak membuat fitur "lupa password" (self-service reset tanpa tahu password lama) pada iterasi ini — itu tetap ditangani lewat reset oleh pengurus di `kelola-akun`.
+- Tidak mengubah field profil lain (nama, kamar, dsb) pada iterasi ini — fokus hanya pada ganti kata sandi.
+- Tidak menambahkan fitur "logout dari semua perangkat" setelah ganti password pada iterasi ini.

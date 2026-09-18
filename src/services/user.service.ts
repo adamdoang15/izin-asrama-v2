@@ -20,6 +20,21 @@ export async function getUserByUsername(username: string): Promise<UserRow | nul
   return data;
 }
 
+export async function getUserById(id: number): Promise<UserRow | null> {
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", id)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Gagal mengambil user by id:", error.message);
+    return null;
+  }
+  return data;
+}
+
 export async function getAllUsers(): Promise<UserRow[]> {
   const { data, error } = await supabase
     .from("users")

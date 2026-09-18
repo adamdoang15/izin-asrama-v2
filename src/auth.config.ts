@@ -22,6 +22,7 @@ export const authConfig: NextAuthConfig = {
 
       const isKelolaAkunRoute = nextUrl.pathname.startsWith("/kelola-akun");
       const isBerandaRoute = nextUrl.pathname.startsWith("/beranda");
+      const isPengaturanRoute = nextUrl.pathname.startsWith("/pengaturan");
 
       if (isKelolaAkunRoute) {
         if (!isLoggedIn) return false;
@@ -31,7 +32,7 @@ export const authConfig: NextAuthConfig = {
         return true;
       }
 
-      if (isBerandaRoute) {
+      if (isBerandaRoute || isPengaturanRoute) {
         return isLoggedIn;
       }
 
