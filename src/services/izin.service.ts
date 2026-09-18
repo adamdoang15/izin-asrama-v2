@@ -24,7 +24,7 @@ export async function getRiwayatIzinSantri(userId: number): Promise<IzinRowWithU
     .limit(50);
 
   if (error) {
-    console.error("Gagal mengambil riwayat izin santri:", error.message);
+    console.error("Gagal mengambil riwayat izin gelara:", error.message);
     return [];
   }
   return (data ?? []) as unknown as IzinRowWithUserJoin[];
@@ -300,7 +300,7 @@ export async function markIzinReturned(
       : "tepat waktu";
 
   sendNotificationToPengurus({
-    title: "Santri Sudah Kembali",
+    title: "Gelara Sudah Kembali",
     body: `${santriName} telah kembali ke asrama (${statusText}).`,
     url: "/beranda",
   }).catch((err) => console.error("Gagal mengirim notifikasi kepulangan:", err));
