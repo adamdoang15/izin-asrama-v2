@@ -27,7 +27,7 @@ export default async function PengaturanPage() {
           <div>
             <span className="block text-xs text-ink-soft mb-0.5">Peran</span>
             <span className="font-medium text-ink">
-              {role === "PENGURUS" ? "Mentor / Pengurus" : "Gelara / Santri"}
+              {role === "PENGURUS" ? "Mentor / Pengurus" : "Gelara"}
             </span>
           </div>
           {kamar && (
