@@ -15,6 +15,7 @@ import {
   getIzinKeluarHariIni,
   fetchPagedIzin,
 } from "@/services/izin.service";
+import { getUserById } from "@/services/user.service";
 
 const PAGE_SIZE = 20;
 
@@ -30,10 +31,13 @@ export default async function BerandaPage({ searchParams }: { searchParams: Sear
 
 async function BerandaSantri({ userId }: { userId: number }) {
   await syncScheduledIzinStatuses();
-  const riwayat = await getRiwayatIzinSantri(userId);
+  const [riwayat, user] = await Promise.all([
+    getRiwayatIzinSantri(userId),
+    getUserById(userId),
+  ]);
 
   return <main className="flex-1 max-w-3xl mx-auto w-full px-6 py-8 space-y-8">
-    <section><h2 className="text-base font-semibold mb-1">Ajukan izin keluar</h2><p className="text-sm text-ink-soft mb-4">Pilih jenis izin, isi tujuan dan waktu, lalu tunggu persetujuan petugas.</p><IzinForm /></section>
+    <section><h2 className="text-base font-semibold mb-1">Ajukan izin keluar</h2><p className="text-sm text-ink-soft mb-4">Pilih jenis izin, isi tujuan dan waktu, lalu tunggu persetujuan petugas.</p><IzinForm isBlacklisted={user?.is_blacklisted} blacklistReason={user?.blacklist_reason} /></section>
     <section><h2 className="text-base font-semibold mb-4">Riwayat pengajuan</h2>{riwayat.length === 0 ? <p className="text-sm text-ink-soft">Belum ada pengajuan izin.</p> : <ul className="space-y-3">{riwayat.map((izin) => {
       const approver = izin.approved_by_user?.name ?? null;
       return <li key={izin.id} className="rounded-md border border-line bg-paper-raised px-4 py-3.5">

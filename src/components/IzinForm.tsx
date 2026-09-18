@@ -5,10 +5,36 @@ import { ajukanIzinAction, type AjukanIzinState } from "@/app/santri/actions";
 
 const initialState: AjukanIzinState = {};
 
-export default function IzinForm() {
+interface IzinFormProps {
+  isBlacklisted?: boolean;
+  blacklistReason?: string | null;
+}
+
+export default function IzinForm({ isBlacklisted, blacklistReason }: IzinFormProps) {
   const [state, formAction, pending] = useActionState(ajukanIzinAction, initialState);
   const formRef = useRef<HTMLFormElement>(null);
   useEffect(() => { if (state.success) formRef.current?.reset(); }, [state.success]);
+
+  if (isBlacklisted) {
+    return (
+      <div className="rounded-md border border-clay/30 bg-clay/5 p-4 space-y-2 text-clay">
+        <div className="flex items-center gap-2 font-semibold text-sm">
+          <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span>Akun Anda Sedang Diblacklist</span>
+        </div>
+        <p className="text-sm">
+          Anda tidak dapat mengajukan izin keluar saat ini.
+          {blacklistReason && (
+            <span className="block mt-1">
+              <span className="font-semibold">Alasan:</span> {blacklistReason}
+            </span>
+          )}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <form ref={formRef} action={formAction} className="rounded-md border border-line bg-paper-raised p-4 space-y-4">
