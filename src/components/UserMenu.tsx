@@ -8,12 +8,14 @@ export default function UserMenu({
   name,
   subtitle,
   showSearch,
+  pengaturanHref,
   kelolaAkunHref,
   onSignOut,
 }: {
   name: string;
   subtitle: string;
   showSearch: boolean;
+  pengaturanHref?: string;
   kelolaAkunHref?: string;
   onSignOut: () => Promise<void>;
 }) {
@@ -74,10 +76,19 @@ export default function UserMenu({
               <p className="text-sm font-medium">{name}</p>
               <p className="text-xs text-ink-soft">{subtitle}</p>
             </div>
+            {pengaturanHref && (
+              <Link
+                href={pengaturanHref}
+                className="block px-4 py-2.5 text-sm text-ink-soft hover:bg-paper hover:text-ink border-b border-line"
+                onClick={() => setOpen(false)}
+              >
+                Pengaturan akun
+              </Link>
+            )}
             {kelolaAkunHref && (
               <Link
                 href={kelolaAkunHref}
-                className="block px-4 py-2.5 text-sm text-ink-soft hover:bg-paper hover:text-ink"
+                className="block px-4 py-2.5 text-sm text-ink-soft hover:bg-paper hover:text-ink border-b border-line"
                 onClick={() => setOpen(false)}
               >
                 Kelola akun

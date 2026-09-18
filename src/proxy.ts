@@ -6,5 +6,5 @@ const { auth } = NextAuth(authConfig);
 export default auth;
 
 export const config = {
-  matcher: ["/beranda/:path*", "/kelola-akun/:path*"],
+  matcher: ["/beranda/:path*", "/kelola-akun/:path*", "/pengaturan/:path*"],
 };
