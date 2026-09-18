@@ -67,3 +67,8 @@ alter table public.izin add constraint izin_late_minutes_valid
   check (late_minutes is null or late_minutes >= 0);
 
 create index if not exists idx_izin_active_schedule on public.izin(status, tanggal_keluar);
+
+-- Perubahan alur V4: Fitur blacklist santri
+alter table public.users add column if not exists is_blacklisted boolean not null default false;
+alter table public.users add column if not exists blacklist_reason text;
+

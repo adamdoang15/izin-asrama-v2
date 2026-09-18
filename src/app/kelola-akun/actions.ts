@@ -9,6 +9,7 @@ import {
   createUser,
   updateUser,
   toggleUserStatus,
+  toggleBlacklistStatus,
 } from "@/services/user.service";
 
 async function requireAdmin() {
@@ -81,3 +82,24 @@ export async function toggleAccountAction(_prev: AccountActionState, formData: F
   revalidatePath("/kelola-akun");
   return { success: true };
 }
+
+export async function toggleBlacklistAction(_prev: AccountActionState, formData: FormData): Promise<AccountActionState> {
+  const session = await requireAdmin();
+  const id = Number(formData.get("id"));
+  if (!id) return { error: "Akun tidak ditemukan." };
+  if (String(id) === session.user.id) return { error: "Anda tidak dapat mem-blacklist akun sendiri." };
+  
+  const isBlacklisted = formData.get("is_blacklisted") === "true";
+  const blacklistReason = formData.get("reason") ? String(formData.get("reason")).trim() : null;
+
+  if (isBlacklisted && !blacklistReason) {
+    return { error: "Alasan blacklist wajib diisi." };
+  }
+
+  const result = await toggleBlacklistStatus(id, isBlacklisted, blacklistReason);
+  if (result.error) return { error: result.error };
+
+  revalidatePath("/kelola-akun");
+  return { success: true };
+}
+

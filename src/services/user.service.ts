@@ -90,3 +90,24 @@ export async function toggleUserStatus(id: number, newStatus: boolean): Promise<
   }
   return {};
 }
+
+export async function toggleBlacklistStatus(
+  id: number,
+  isBlacklisted: boolean,
+  reason?: string | null
+): Promise<{ error?: string }> {
+  const { error } = await supabase
+    .from("users")
+    .update({
+      is_blacklisted: isBlacklisted,
+      blacklist_reason: isBlacklisted ? reason ?? null : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) {
+    return { error: `Gagal mengubah status blacklist: ${error.message}` };
+  }
+  return {};
+}
+

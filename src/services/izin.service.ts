@@ -121,6 +121,22 @@ export async function createIzin(
   tanggal_keluar: string,
   perkiraan_kembali: string
 ): Promise<{ error?: string }> {
+  // Check blacklist status
+  const { data: user, error: userError } = await supabase
+    .from("users")
+    .select("is_blacklisted, blacklist_reason")
+    .eq("id", userId)
+    .single();
+
+  if (userError) {
+    return { error: `Gagal mengonfirmasi status pengguna: ${userError.message}` };
+  }
+
+  if (user?.is_blacklisted) {
+    const reasonText = user.blacklist_reason ? ` (Alasan: ${user.blacklist_reason})` : "";
+    return { error: `Anda sedang diblacklist dan tidak dapat mengajukan izin keluar${reasonText}.` };
+  }
+
   const { data: inserted, error } = await supabase
     .from("izin")
     .insert({
