@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { auth } from "@/lib/auth";
 import ChangePasswordForm from "@/components/ChangePasswordForm";
 
@@ -11,6 +12,12 @@ export default async function PengaturanPage() {
   return (
     <main className="flex-1 max-w-3xl mx-auto w-full px-6 py-10 space-y-8">
       <div>
+        <Link
+          href="/beranda"
+          className="inline-flex items-center text-sm text-teal hover:underline mb-3"
+        >
+          ← Kembali ke Beranda
+        </Link>
         <h1 className="text-xl font-semibold tracking-tight">Pengaturan Akun</h1>
         <p className="text-sm text-ink-soft mt-1">
           Kelola kata sandi dan informasi profil akun Anda.
