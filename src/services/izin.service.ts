@@ -146,8 +146,8 @@ export async function createIzin(
     catatan: null,
   });
 
-  // Trigger push notification to all Pengurus asynchronously
-  sendNotificationToPengurus({
+  // Trigger push notification to all Pengurus
+  await sendNotificationToPengurus({
     title: "Pengajuan Izin Baru",
     body: `Ada pengajuan izin baru (${jenis_izin}) untuk alasan: ${alasan}`,
     url: "/beranda",
@@ -201,7 +201,7 @@ export async function approveIzin(
   });
 
   if (current?.user_id) {
-    sendNotificationToUser(current.user_id, {
+    await sendNotificationToUser(current.user_id, {
       title: "Izin Disetujui",
       body: "Pengajuan izin Anda telah disetujui oleh petugas.",
       url: "/beranda",
@@ -245,7 +245,7 @@ export async function rejectIzin(
   });
 
   if (current?.user_id) {
-    sendNotificationToUser(current.user_id, {
+    await sendNotificationToUser(current.user_id, {
       title: "Izin Ditolak",
       body: `Pengajuan izin Anda ditolak. Catatan: ${catatan}`,
       url: "/beranda",
@@ -293,13 +293,13 @@ export async function markIzinReturned(
     catatan: `${statusCatatan}${locationCatatan}`,
   });
 
-  // Trigger push notification to all Pengurus asynchronously
+  // Trigger push notification to all Pengurus
   const statusText =
     returnStatus === "TERLAMBAT"
       ? `terlambat ${lateMinutes} menit`
       : "tepat waktu";
 
-  sendNotificationToPengurus({
+  await sendNotificationToPengurus({
     title: "Gelara Sudah Kembali",
     body: `${santriName} telah kembali ke asrama (${statusText}).`,
     url: "/beranda",
