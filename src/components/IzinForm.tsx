@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { ajukanIzinAction, type AjukanIzinState } from "@/app/santri/actions";
 
 const initialState: AjukanIzinState = {};
@@ -10,10 +10,46 @@ interface IzinFormProps {
   blacklistReason?: string | null;
 }
 
+function getNowLocalString(): string {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60000;
+  const localISOTime = new Date(now.getTime() - offset).toISOString().slice(0, 16);
+  return localISOTime;
+}
+
 export default function IzinForm({ isBlacklisted, blacklistReason }: IzinFormProps) {
   const [state, formAction, pending] = useActionState(ajukanIzinAction, initialState);
   const formRef = useRef<HTMLFormElement>(null);
-  useEffect(() => { if (state.success) formRef.current?.reset(); }, [state.success]);
+
+  const [tanggalKeluar, setTanggalKeluar] = useState("");
+  const [perkiraanKembali, setPerkiraanKembali] = useState("");
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [minNow, setMinNow] = useState<string>("");
+
+  useEffect(() => {
+    setMinNow(getNowLocalString());
+  }, []);
+
+  useEffect(() => {
+    if (tanggalKeluar && perkiraanKembali) {
+      if (new Date(perkiraanKembali) <= new Date(tanggalKeluar)) {
+        setValidationError("Perkiraan waktu kembali harus lebih lambat dari waktu keluar.");
+      } else {
+        setValidationError(null);
+      }
+    } else {
+      setValidationError(null);
+    }
+  }, [tanggalKeluar, perkiraanKembali]);
+
+  useEffect(() => {
+    if (state.success) {
+      formRef.current?.reset();
+      setTanggalKeluar("");
+      setPerkiraanKembali("");
+      setValidationError(null);
+    }
+  }, [state.success]);
 
   if (isBlacklisted) {
     return (
@@ -59,12 +95,54 @@ export default function IzinForm({ isBlacklisted, blacklistReason }: IzinFormPro
         <textarea id="alasan" name="alasan" rows={3} required placeholder="Jelaskan alasan izin secara singkat" className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-teal focus:ring-1 focus:ring-teal resize-none" />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-1.5"><label htmlFor="tanggal_keluar" className="block text-sm font-medium">Waktu keluar</label><input id="tanggal_keluar" name="tanggal_keluar" type="datetime-local" required className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-teal focus:ring-1 focus:ring-teal" /></div>
-        <div className="space-y-1.5"><label htmlFor="perkiraan_kembali" className="block text-sm font-medium">Perkiraan kembali</label><input id="perkiraan_kembali" name="perkiraan_kembali" type="datetime-local" required className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-teal focus:ring-1 focus:ring-teal" /></div>
+        <div className="space-y-1.5">
+          <label htmlFor="tanggal_keluar" className="block text-sm font-medium">Waktu keluar</label>
+          <input
+            id="tanggal_keluar"
+            name="tanggal_keluar"
+            type="datetime-local"
+            required
+            min={minNow}
+            value={tanggalKeluar}
+            onChange={(e) => {
+              const val = e.target.value;
+              setTanggalKeluar(val);
+              if (perkiraanKembali && val > perkiraanKembali) {
+                setPerkiraanKembali("");
+              }
+            }}
+            className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-teal focus:ring-1 focus:ring-teal"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <label htmlFor="perkiraan_kembali" className="block text-sm font-medium">Perkiraan kembali</label>
+          <input
+            id="perkiraan_kembali"
+            name="perkiraan_kembali"
+            type="datetime-local"
+            required
+            min={tanggalKeluar || minNow}
+            value={perkiraanKembali}
+            onChange={(e) => setPerkiraanKembali(e.target.value)}
+            className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-teal focus:ring-1 focus:ring-teal"
+          />
+        </div>
       </div>
+      {validationError && (
+        <p className="text-sm text-clay" role="alert">
+          {validationError}
+        </p>
+      )}
       {state.error && <p className="text-sm text-clay" role="alert">{state.error}</p>}
       {state.success && <p className="text-sm text-sage" role="status">Pengajuan terkirim dan masuk antrean persetujuan.</p>}
-      <button type="submit" disabled={pending} className="rounded-md bg-teal px-4 py-2.5 text-sm font-medium text-paper-raised hover:opacity-90 disabled:opacity-60">{pending ? "Mengirim..." : "Ajukan izin"}</button>
+      <button
+        type="submit"
+        disabled={pending || Boolean(validationError)}
+        className="rounded-md bg-teal px-4 py-2.5 text-sm font-medium text-paper-raised hover:opacity-90 disabled:opacity-60"
+      >
+        {pending ? "Mengirim..." : "Ajukan izin"}
+      </button>
     </form>
   );
 }
+
