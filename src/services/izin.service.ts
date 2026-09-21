@@ -93,6 +93,34 @@ export async function fetchPagedIzin(
   };
 }
 
+export interface IzinExportFilter {
+  startDateISO?: string;
+  endDateISO?: string;
+  status?: StatusIzin;
+  jenisIzin?: JenisIzin;
+}
+
+export async function fetchIzinForExport(
+  filter: IzinExportFilter
+): Promise<IzinRowWithUserJoin[]> {
+  let query = supabase
+    .from("izin")
+    .select("*, users!izin_user_id_fkey(name, kamar), approved_by_user:users!izin_approved_by_fkey(name)")
+    .order("tanggal_keluar", { ascending: false });
+
+  if (filter.startDateISO) query = query.gte("tanggal_keluar", filter.startDateISO);
+  if (filter.endDateISO) query = query.lt("tanggal_keluar", filter.endDateISO);
+  if (filter.status) query = query.eq("status", filter.status);
+  if (filter.jenisIzin) query = query.eq("jenis_izin", filter.jenisIzin);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("Gagal mengambil data izin untuk ekspor:", error.message);
+    return [];
+  }
+  return (data ?? []) as unknown as IzinRowWithUserJoin[];
+}
+
 export async function checkActiveIzinConflict(
   userId: number,
   tanggalKeluarISO: string,

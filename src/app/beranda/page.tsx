@@ -8,6 +8,7 @@ import StatusPill from "@/components/StatusPill";
 import AdminIzinRow from "@/components/AdminIzinRow";
 import { formatTanggalWaktu, jakartaDayRange } from "@/lib/format";
 import ReturnIzinButton from "@/components/ReturnIzinButton";
+import ExportLaporanForm from "@/components/ExportLaporanForm";
 import {
   syncScheduledIzinStatuses,
   getRiwayatIzinSantri,
@@ -70,6 +71,7 @@ async function BerandaPengurus({ searchParams }: { searchParams: SearchParams })
 
   return <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-8 space-y-8">
     <section><div className="flex items-end justify-between gap-4 mb-4"><div><h1 className="text-lg font-semibold">Dashboard petugas</h1><p className="text-sm text-ink-soft">Pantau pengajuan, gelara yang sedang keluar, dan kepulangan hari ini.</p></div></div>
+      <div className="mb-4"><p className="text-xs text-ink-soft mb-2 font-medium">Ekspor laporan</p><ExportLaporanForm /></div>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3"><Stat label="Menunggu" value={counts.MENUNGGU ?? 0} tone="amber"/><Stat label="Disetujui" value={counts.DISETUJUI ?? 0} tone="sage"/><Stat label="Sedang keluar" value={counts.SEDANG_KELUAR ?? 0} tone="teal"/><Stat label="Sudah kembali" value={counts.SUDAH_KEMBALI ?? 0} tone="sage"/><Stat label="Ditolak" value={counts.DITOLAK ?? 0} tone="clay"/></div>
     </section>
     <section><h2 className="text-base font-semibold mb-4">Keluar hari ini</h2>{todayRows.length === 0 ? <p className="text-sm text-ink-soft">Tidak ada gelara yang sedang/terjadwal keluar hari ini.</p> : <ul className="space-y-3">{todayRows.map(i => <AdminIzinRow key={i.id} izin={i}/>)}</ul>}</section>
