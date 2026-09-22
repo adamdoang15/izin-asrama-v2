@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { BellIcon, ChevronDownIcon, SearchIcon } from "./icons";
+import ThemeToggle from "./ThemeToggle";
 
 export default function UserMenu({
   name,
@@ -43,6 +44,8 @@ export default function UserMenu({
           <SearchIcon className="h-[18px] w-[18px]" />
         </button>
       )}
+
+      <ThemeToggle />
 
       <button
         type="button"

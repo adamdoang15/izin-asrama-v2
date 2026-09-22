@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import ChangePasswordForm from "@/components/ChangePasswordForm";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default async function PengaturanPage() {
   const session = await auth();
@@ -44,6 +45,16 @@ export default async function PengaturanPage() {
             </div>
           )}
         </div>
+      </section>
+
+      <section className="rounded-lg border border-line bg-paper-raised p-5 space-y-4">
+        <div>
+          <h2 className="text-base font-semibold tracking-tight">Tampilan</h2>
+          <p className="text-xs text-ink-soft mt-1">
+            Pilih tampilan terang, gelap, atau ikuti pengaturan perangkat Anda.
+          </p>
+        </div>
+        <ThemeToggle variant="segmented" />
       </section>
 
       <section className="rounded-lg border border-line bg-paper-raised p-5 space-y-4">
