@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { auth, signOut } from "@/lib/auth";
+import ThemeToggle from "./ThemeToggle";
 
 export default async function PublicNav() {
   const session = await auth();
@@ -40,6 +41,8 @@ export default async function PublicNav() {
               Beranda
             </Link>
 
+            <ThemeToggle />
+
             <form
               action={async () => {
                 "use server";
@@ -62,6 +65,7 @@ export default async function PublicNav() {
             >
               Panduan SOP
             </Link>
+            <ThemeToggle />
             <Link
               href="/login"
               className="text-sm font-medium text-paper-raised bg-teal px-4 py-2 rounded-md hover:opacity-90 transition-opacity"
