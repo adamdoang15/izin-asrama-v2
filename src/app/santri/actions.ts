@@ -134,7 +134,7 @@ export async function tandaiKembaliAction(
     returnedAt,
     returnStatus,
     lateMinutes,
-    session.user.name ?? "Santri",
+    session.user.name ?? "Gelara",
     { latitude: userLat, longitude: userLng, distance }
   );
   if (result.error) return { error: result.error };

@@ -141,7 +141,7 @@ export default function AccountRow({ account, isSelf }: { account: UserRow; isSe
                           onClick={() => setShowBlacklistForm(true)}
                           className="text-sm text-clay hover:underline font-medium"
                         >
-                          Blacklist Santri
+                          Blacklist Gelara
                         </button>
                       ) : (
                         <form action={blacklistAction} className="mt-2 space-y-2 bg-clay/5 p-3 rounded-md border border-clay/20">

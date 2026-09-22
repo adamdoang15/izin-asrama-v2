@@ -260,7 +260,7 @@ export default function StatsLanding({ rows }: Props) {
             <div>
               <h2 className="font-semibold text-ink">Alur & SOP Perizinan Asrama</h2>
               <p className="mt-1 text-xs text-ink-soft">
-                Pelajari alur pengajuan izin, kategori izin, dan ketentuan validasi radius kepulangan santri.
+                Pelajari alur pengajuan izin, kategori izin, dan ketentuan validasi radius kepulangan gelara.
               </p>
             </div>
             <Link

@@ -14,7 +14,7 @@ export async function buildLaporanIzinExcel(
 
   sheet.columns = [
     { header: "No", key: "no", width: 5 },
-    { header: "Nama Santri", key: "nama_santri", width: 22 },
+    { header: "Nama Gelara", key: "nama_santri", width: 22 },
     { header: "Kamar", key: "kamar", width: 12 },
     { header: "Jenis Izin", key: "jenis_izin", width: 16 },
     { header: "Tujuan", key: "tujuan", width: 28 },
