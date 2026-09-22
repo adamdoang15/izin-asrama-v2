@@ -35,27 +35,27 @@ export default function PanduanPage() {
     {
       nama: "",
       badge: "HARIAN",
-      desc: "Izin keluar untuk keperluan kurang dari 2 jam (misal: beli perlengkapan, jajan, laundry, dll) tanpa menginap.",
+      desc: "Izin keluar untuk keperluan pribadi atau kegiatan tertentu yang sifatnya bukan rekreasi dan kembali pada hari yang sama (misal: beli perlengkapan, jajan, laundry, potong rambut dll) tanpa menginap. Dapat diajukan dan disetujui oleh semua mentor.",
     },
     {
       nama: "",
       badge: "MENGINAP",
-      desc: "Izin pulang ke rumah atau menginap di luar asrama untuk  hari libur resmi asrama atau pengajuan dari orang tua.",
+      desc: "Izin pulang ke rumah atau menginap di luar asrama untuk hari libur resmi asrama atas pengajuan dari orang tua. Hanya bisa diajukan kepada Penanggung Jawab Kegelaraan atas persetujuan Ketua LKP.",
     },
     {
       nama: "",
       badge: "REKREASI",
-      desc: "Izin untuk kegiatan pribadi seperti keluar untuk berolahraga, mengunjungi perpustakaan, atau kegiatan pribadi lainnya yang lebih dari 2 jam.",
+      desc: "Izin untuk kegiatan hiburan atau rekreasi (misal: nonton bioskop, main ke cafe, main futsal, berenang atau kegiatan refreshing lainnya). Hanya bisa diajukan maksimal 1 kali dalam satu bulan, diajukan kepada Penanggung Jawab Kegelaraan atas persetujuan Ketua LKP.",
     },
     {
       nama: "",
       badge: "KELUARGA",
-      desc: "Izin khusus untuk acara atau urusan penting bersama keluarga.",
+      desc: "Izin khusus untuk acara atau urusan penting bersama keluarga tanpa menginap. Hanya bisa diajukan kepada Penanggung Jawab Kegelaraan atas persetujuan Ketua LKP.",
     },
     {
       nama: "",
       badge: "DARURAT",
-      desc: "Izin mendadak untuk keperluan medis atau duka cita keluarga yang memerlukan penanganan cepat.",
+      desc: "Izin mendadak untuk keperluan medis atau duka cita keluarga yang memerlukan penanganan cepat. Diajukan kepada Penanggung Jawab Kegelaraan atas persetujuan Ketua LKP.",
     },
   ];
 
@@ -139,10 +139,30 @@ export default function PanduanPage() {
             </div>
           </section>
 
-          {/* Section 3: Ketentuan Waktu & Validasi Lokasi */}
+          {/* Section 3: Ketentuan Waktu, Wewenang & Validasi Lokasi */}
           <section className="rounded-2xl border border-line bg-paper-raised p-6 shadow-sm">
-            <h2 className="text-xl font-semibold text-ink">3. Ketentuan Waktu & Validasi Radius</h2>
+            <h2 className="text-xl font-semibold text-ink">3. Ketentuan Pengajuan, Wewenang & Sanksi</h2>
             <ul className="mt-4 space-y-3 text-sm text-ink-soft">
+              <li className="flex items-start gap-2">
+                <span className="mt-1 text-teal">•</span>
+                <span>
+                  <strong className="text-ink">Wewenang Persetujuan Izin:</strong>
+                  <ul className="mt-1.5 list-disc pl-5 space-y-1">
+                    <li>
+                      <strong>Izin Harian:</strong> Dapat diajukan dan disetujui oleh <em>semua mentor</em>.
+                    </li>
+                    <li>
+                      <strong>Izin Menginap, Rekreasi, Keluarga & Darurat:</strong> Hanya bisa diajukan kepada <em>Penanggung Jawab Kegelaraan</em> atas <em>persetujuan Ketua LKP</em>.
+                    </li>
+                  </ul>
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-1 text-teal">•</span>
+                <span>
+                  <strong className="text-ink">Batasan Izin Rekreasi:</strong> Izin rekreasi hanya dapat diajukan maksimal <strong>1 kali dalam satu bulan</strong>.
+                </span>
+              </li>
               <li className="flex items-start gap-2">
                 <span className="mt-1 text-teal">•</span>
                 <span>
@@ -159,6 +179,18 @@ export default function PanduanPage() {
                 <span className="mt-1 text-teal">•</span>
                 <span>
                   <strong className="text-ink">Keterlambatan:</strong> Apabila gelara menekan tombol kepulangan melewati perkiraan waktu kembali, status akan dicatat sebagai <em>Terlambat</em> beserta jumlah durasi keterlambatannya.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-1 text-clay">•</span>
+                <span>
+                  <strong className="text-clay">Sanksi Keterlambatan Tanpa Alasan Jelas:</strong> Jika gelara terlambat dengan alasan yang tidak meyakinkan, maka akan di-blacklist dalam perizinan selama 1 minggu.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-1 text-clay">•</span>
+                <span>
+                  <strong className="text-clay">Sanksi Pelanggaran Izin:</strong> Jika gelara melakukan pelanggaran perizinan (misalnya izin tidak sesuai dan/atau tidak mengajukan izin sama sekali), maka akan di-blacklist selama 1 bulan.
                 </span>
               </li>
             </ul>
