@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 export const revalidate = 300; // Cache selama 5 menit (ISR)
 
 export const metadata: Metadata = {
-  title: "Statistik Perizinan Gelara | Izin Asrama",
+  title: "Perizinan Gelara | Izin Asrama",
   description: "Halaman perizinan gelaran secara real-time.",
   openGraph: {
     title: "Perizinan Gelara | Izin Asrama",
