@@ -11,6 +11,7 @@ import {
   createIzin,
   getCurrentIzinStatus,
   markIzinReturned,
+  submitIzinRevision,
 } from "@/services/izin.service";
 
 const jenisIzinSchema = z.enum(["HARIAN", "MENGINAP", "REKREASI", "KELUARGA", "DARURAT"]);
@@ -23,8 +24,14 @@ const izinSchema = z.object({
   perkiraan_kembali: z.string().min(1, "Perkiraan kembali wajib diisi."),
 });
 
+const revisiIzinSchema = izinSchema.extend({
+  id: z.coerce.number().int().positive(),
+});
+
 export type AjukanIzinState = { error?: string; success?: boolean };
 export type KembaliState = { error?: string; success?: boolean };
+export type RevisiIzinState = { error?: string; success?: boolean };
+
 
 export async function ajukanIzinAction(
   _prevState: AjukanIzinState,
@@ -74,6 +81,56 @@ export async function ajukanIzinAction(
   }
 
   const result = await createIzin(Number(session.user.id), jenis_izin, alasan, tujuan, tanggalKeluarISO, perkiraanKembaliISO);
+  if (result.error) return { error: result.error };
+
+  revalidatePath("/beranda");
+  return { success: true };
+}
+
+export async function kirimRevisiIzinAction(
+  _prevState: RevisiIzinState,
+  formData: FormData
+): Promise<RevisiIzinState> {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "SANTRI") {
+    return { error: "Sesi tidak valid. Silakan masuk kembali." };
+  }
+
+  const parsed = revisiIzinSchema.safeParse({
+    id: formData.get("id"),
+    jenis_izin: formData.get("jenis_izin"),
+    tujuan: formData.get("tujuan"),
+    alasan: formData.get("alasan"),
+    tanggal_keluar: formData.get("tanggal_keluar"),
+    perkiraan_kembali: formData.get("perkiraan_kembali"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+
+  const { jenis_izin, tujuan, alasan } = parsed.data;
+
+  const tanggalKeluarISO = wibInputToISOString(parsed.data.tanggal_keluar);
+  const perkiraanKembaliISO = wibInputToISOString(parsed.data.perkiraan_kembali);
+  if (!tanggalKeluarISO || !perkiraanKembaliISO) {
+    return { error: "Format tanggal tidak valid." };
+  }
+
+  const keluar = new Date(tanggalKeluarISO);
+  const kembali = new Date(perkiraanKembaliISO);
+  if (kembali <= keluar) return { error: "Perkiraan kembali harus setelah waktu keluar." };
+
+  const conflict = await checkActiveIzinConflict(Number(session.user.id), tanggalKeluarISO, perkiraanKembaliISO);
+  if (conflict.error) return { error: conflict.error };
+  if (conflict.hasConflict) {
+    return { error: "Jadwal baru ini bentrok dengan pengajuan/izin aktif Anda yang lain." };
+  }
+
+  const result = await submitIzinRevision(parsed.data.id, Number(session.user.id), session.user.name ?? "Gelara", {
+    jenis_izin,
+    alasan,
+    tujuan,
+    tanggal_keluar: tanggalKeluarISO,
+    perkiraan_kembali: perkiraanKembaliISO,
+  });
   if (result.error) return { error: result.error };
 
   revalidatePath("/beranda");

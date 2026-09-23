@@ -72,3 +72,21 @@ create index if not exists idx_izin_active_schedule on public.izin(status, tangg
 alter table public.users add column if not exists is_blacklisted boolean not null default false;
 alter table public.users add column if not exists blacklist_reason text;
 
+-- Perubahan alur V5: Fitur "Minta Revisi" (pengurus menandai, gelara yang merevisi)
+alter table public.izin_logs add column if not exists data_sebelum jsonb;
+alter table public.izin_logs add column if not exists data_sesudah jsonb;
+
+-- Constraint status lama harus dilepas dulu sebelum status baru ditambahkan,
+-- sama seperti pola yang dipakai waktu migrasi V1 -> V2 di atas.
+do $$
+declare r record;
+begin
+  for r in select conname from pg_constraint where conrelid = 'public.izin'::regclass and contype = 'c' and pg_get_constraintdef(oid) ilike '%status%' and pg_get_constraintdef(oid) ilike '%MENUNGGU%' loop
+    execute format('alter table public.izin drop constraint if exists %I', r.conname);
+  end loop;
+end $$;
+
+alter table public.izin add constraint izin_status_v5
+  check (status in ('MENUNGGU','PERLU_REVISI','DISETUJUI','DITOLAK','SEDANG_KELUAR','SUDAH_KEMBALI','TIDAK_JADI'));
+
+

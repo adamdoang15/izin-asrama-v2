@@ -35,7 +35,7 @@ export async function getIzinCounts(): Promise<Record<string, number>> {
     .from("izin")
     .select("status", { count: "exact", head: false });
 
-  const counts = { MENUNGGU: 0, DISETUJUI: 0, SEDANG_KELUAR: 0, SUDAH_KEMBALI: 0, DITOLAK: 0 } as Record<string, number>;
+  const counts = { MENUNGGU: 0, PERLU_REVISI: 0, DISETUJUI: 0, SEDANG_KELUAR: 0, SUDAH_KEMBALI: 0, DITOLAK: 0 } as Record<string, number>;
   if (error) {
     console.error("Gagal mengambil statistik izin:", error.message);
     return counts;
@@ -124,15 +124,22 @@ export async function fetchIzinForExport(
 export async function checkActiveIzinConflict(
   userId: number,
   tanggalKeluarISO: string,
-  perkiraanKembaliISO: string
+  perkiraanKembaliISO: string,
+  excludeId?: number
 ): Promise<{ hasConflict: boolean; error?: string }> {
-  const { data: activeRequests, error } = await supabase
+  let query = supabase
     .from("izin")
     .select("id, tanggal_keluar, perkiraan_kembali, status")
     .eq("user_id", userId)
     .in("status", ["MENUNGGU", "DISETUJUI", "SEDANG_KELUAR"])
     .lt("tanggal_keluar", perkiraanKembaliISO)
     .gt("perkiraan_kembali", tanggalKeluarISO);
+
+  if (excludeId !== undefined) {
+    query = query.neq("id", excludeId);
+  }
+
+  const { data: activeRequests, error } = await query;
 
   if (error) {
     return { hasConflict: false, error: `Gagal memeriksa jadwal izin: ${error.message}` };
@@ -295,6 +302,124 @@ export async function rejectIzin(
       url: "/beranda",
     }).catch((err) => console.error("Gagal mengirim notifikasi penolakan:", err));
   }
+
+  return {};
+}
+
+export async function requestIzinRevision(
+  id: number,
+  actorId: number,
+  catatan: string
+): Promise<{ error?: string }> {
+  const now = new Date().toISOString();
+  const current = await getCurrentIzinStatus(id);
+  if (!current) return { error: "Pengajuan tidak ditemukan." };
+
+  const { error } = await supabase
+    .from("izin")
+    .update({
+      status: "PERLU_REVISI",
+      catatan_admin: catatan,
+      updated_at: now,
+    })
+    .eq("id", id)
+    .eq("status", "MENUNGGU"); // jaga-jaga race condition, sama seperti approveIzin/rejectIzin
+
+  if (error) return { error: `Gagal meminta revisi: ${error.message}` };
+
+  await supabase.from("izin_logs").insert({
+    izin_id: id,
+    actor_id: actorId,
+    action: "MINTA_REVISI",
+    old_status: "MENUNGGU",
+    new_status: "PERLU_REVISI",
+    catatan,
+  });
+
+  if (current.user_id) {
+    await sendNotificationToUser(current.user_id, {
+      title: "Pengajuan Izin Perlu Direvisi",
+      body: `Catatan dari petugas: ${catatan}`,
+      url: "/beranda",
+    }).catch((err) => console.error("Gagal mengirim notifikasi minta revisi:", err));
+  }
+
+  return {};
+}
+
+export interface SubmitRevisionInput {
+  jenis_izin: JenisIzin;
+  alasan: string;
+  tujuan: string;
+  tanggal_keluar: string;      // ISO string
+  perkiraan_kembali: string;   // ISO string
+}
+
+export async function submitIzinRevision(
+  id: number,
+  userId: number,
+  santriName: string,
+  input: SubmitRevisionInput
+): Promise<{ error?: string }> {
+  const now = new Date().toISOString();
+
+  // Ambil data lama untuk snapshot log & validasi kepemilikan/status
+  const { data: before, error: beforeError } = await supabase
+    .from("izin")
+    .select("id, user_id, status, jenis_izin, alasan, tujuan, tanggal_keluar, perkiraan_kembali")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (beforeError || !before) return { error: "Pengajuan tidak ditemukan." };
+  if (before.user_id !== userId) return { error: "Anda tidak memiliki akses ke pengajuan ini." };
+  if (before.status !== "PERLU_REVISI") return { error: "Pengajuan ini tidak sedang menunggu revisi Anda." };
+
+  const { error } = await supabase
+    .from("izin")
+    .update({
+      jenis_izin: input.jenis_izin,
+      alasan: input.alasan,
+      tujuan: input.tujuan,
+      tanggal_keluar: input.tanggal_keluar,
+      perkiraan_kembali: input.perkiraan_kembali,
+      status: "MENUNGGU",
+      catatan_admin: null,
+      updated_at: now,
+    })
+    .eq("id", id)
+    .eq("user_id", userId)
+    .eq("status", "PERLU_REVISI"); // jaga-jaga race condition
+
+  if (error) return { error: `Gagal mengirim ulang revisi: ${error.message}` };
+
+  await supabase.from("izin_logs").insert({
+    izin_id: id,
+    actor_id: userId,
+    action: "KIRIM_REVISI",
+    old_status: "PERLU_REVISI",
+    new_status: "MENUNGGU",
+    catatan: null,
+    data_sebelum: {
+      jenis_izin: before.jenis_izin,
+      alasan: before.alasan,
+      tujuan: before.tujuan,
+      tanggal_keluar: before.tanggal_keluar,
+      perkiraan_kembali: before.perkiraan_kembali,
+    },
+    data_sesudah: {
+      jenis_izin: input.jenis_izin,
+      alasan: input.alasan,
+      tujuan: input.tujuan,
+      tanggal_keluar: input.tanggal_keluar,
+      perkiraan_kembali: input.perkiraan_kembali,
+    },
+  });
+
+  await sendNotificationToPengurus({
+    title: "Revisi Pengajuan Izin Dikirim",
+    body: `${santriName} telah mengirim ulang pengajuan yang direvisi, mohon ditinjau.`,
+    url: "/beranda",
+  }).catch((err) => console.error("Gagal mengirim notifikasi kirim revisi:", err));
 
   return {};
 }
