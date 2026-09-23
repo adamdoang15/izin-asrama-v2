@@ -23,7 +23,7 @@ create table if not exists public.izin (
   tujuan text not null,
   tanggal_keluar timestamptz not null,
   perkiraan_kembali timestamptz not null,
-  status text not null default 'MENUNGGU' check (status in ('MENUNGGU','DISETUJUI','DITOLAK','SEDANG_KELUAR','SUDAH_KEMBALI','TIDAK_JADI')),
+  status text not null default 'MENUNGGU' check (status in ('MENUNGGU','PERLU_REVISI','DISETUJUI','DITOLAK','SEDANG_KELUAR','SUDAH_KEMBALI','TIDAK_JADI')),
   catatan_admin text,
   approved_by bigint references public.users(id) on delete set null,
   approved_at timestamptz,
@@ -43,6 +43,8 @@ create table if not exists public.izin_logs (
   old_status text,
   new_status text,
   catatan text,
+  data_sebelum jsonb,
+  data_sesudah jsonb,
   created_at timestamptz not null default now()
 );
 

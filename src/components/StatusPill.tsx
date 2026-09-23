@@ -2,6 +2,7 @@ import type { StatusIzin } from "@/lib/types";
 
 const STATUS_CONFIG: Record<StatusIzin, { label: string; dot: string; text: string }> = {
   MENUNGGU: { label: "Menunggu", dot: "bg-amber", text: "text-amber" },
+  PERLU_REVISI: { label: "Perlu direvisi", dot: "bg-clay", text: "text-clay" },
   DISETUJUI: { label: "Disetujui", dot: "bg-sage", text: "text-sage" },
   DITOLAK: { label: "Ditolak", dot: "bg-clay", text: "text-clay" },
   SEDANG_KELUAR: { label: "Sedang keluar", dot: "bg-teal", text: "text-teal" },

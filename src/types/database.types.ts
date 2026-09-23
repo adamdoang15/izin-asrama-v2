@@ -60,7 +60,7 @@ export type Database = {
           tujuan: string
           tanggal_keluar: string
           perkiraan_kembali: string
-          status: "MENUNGGU" | "DISETUJUI" | "DITOLAK" | "SEDANG_KELUAR" | "SUDAH_KEMBALI" | "TIDAK_JADI"
+          status: "MENUNGGU" | "PERLU_REVISI" | "DISETUJUI" | "DITOLAK" | "SEDANG_KELUAR" | "SUDAH_KEMBALI" | "TIDAK_JADI"
           catatan_admin: string | null
           approved_by: number | null
           approved_at: string | null
@@ -78,7 +78,7 @@ export type Database = {
           tujuan: string
           tanggal_keluar: string
           perkiraan_kembali: string
-          status?: "MENUNGGU" | "DISETUJUI" | "DITOLAK" | "SEDANG_KELUAR" | "SUDAH_KEMBALI" | "TIDAK_JADI"
+          status?: "MENUNGGU" | "PERLU_REVISI" | "DISETUJUI" | "DITOLAK" | "SEDANG_KELUAR" | "SUDAH_KEMBALI" | "TIDAK_JADI"
           catatan_admin?: string | null
           approved_by?: number | null
           approved_at?: string | null
@@ -96,7 +96,7 @@ export type Database = {
           tujuan?: string
           tanggal_keluar?: string
           perkiraan_kembali?: string
-          status?: "MENUNGGU" | "DISETUJUI" | "DITOLAK" | "SEDANG_KELUAR" | "SUDAH_KEMBALI" | "TIDAK_JADI"
+          status?: "MENUNGGU" | "PERLU_REVISI" | "DISETUJUI" | "DITOLAK" | "SEDANG_KELUAR" | "SUDAH_KEMBALI" | "TIDAK_JADI"
           catatan_admin?: string | null
           approved_by?: number | null
           approved_at?: string | null
@@ -132,6 +132,8 @@ export type Database = {
           old_status: string | null
           new_status: string | null
           catatan: string | null
+          data_sebelum: Json | null
+          data_sesudah: Json | null
           created_at: string
         }
         Insert: {
@@ -142,6 +144,8 @@ export type Database = {
           old_status?: string | null
           new_status?: string | null
           catatan?: string | null
+          data_sebelum?: Json | null
+          data_sesudah?: Json | null
           created_at?: string
         }
         Update: {
@@ -152,6 +156,8 @@ export type Database = {
           old_status?: string | null
           new_status?: string | null
           catatan?: string | null
+          data_sebelum?: Json | null
+          data_sesudah?: Json | null
           created_at?: string
         }
         Relationships: [

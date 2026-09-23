@@ -73,6 +73,24 @@ export function jakartaDateParts(value: string | Date = new Date()) {
 }
 
 /**
+ * Kebalikan dari wibInputToISOString: mengubah ISO timestamp (UTC) menjadi
+ * string "YYYY-MM-DDTHH:mm" yang merepresentasikan jam WIB-nya, supaya bisa
+ * dipakai sebagai defaultValue/value pada <input type="datetime-local">.
+ */
+export function isoToWibInputValue(value: string | null | undefined): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const wibMs = date.getTime() + WIB_OFFSET_MS;
+  const wib = new Date(wibMs);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${wib.getUTCFullYear()}-${pad(wib.getUTCMonth() + 1)}-${pad(wib.getUTCDate())}T${pad(wib.getUTCHours())}:${pad(wib.getUTCMinutes())}`;
+}
+
+export const isoToWibInputString = isoToWibInputValue;
+
+
+/**
  * ISO start/end instants (UTC) for a given WIB calendar day — i.e. the range
  * [00:00 WIB, 24:00 WIB) for that date — regardless of the server's own
  * timezone. Defaults to "today" in WIB.
@@ -83,3 +101,4 @@ export function jakartaDayRange(value: string | Date = new Date()) {
   const end = new Date(Date.UTC(year, month - 1, day + 1) - WIB_OFFSET_MS);
   return { start: start.toISOString(), end: end.toISOString() };
 }
+

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { setujuiIzinAction, tolakIzinAction, type ActionState } from "@/app/admin/actions";
+import { setujuiIzinAction, tolakIzinAction, mintaRevisiIzinAction, type ActionState } from "@/app/admin/actions";
 import StatusPill from "@/components/StatusPill";
 import { formatTanggalWaktu } from "@/lib/format";
 import { JENIS_IZIN_LABEL, type IzinWithSantri } from "@/lib/types";
@@ -10,8 +10,10 @@ const initialState: ActionState = {};
 
 export default function AdminIzinRow({ izin }: { izin: IzinWithSantri }) {
   const [showTolak, setShowTolak] = useState(false);
+  const [showMintaRevisi, setShowMintaRevisi] = useState(false);
   const [approveState, approveAction, approvePending] = useActionState(setujuiIzinAction, initialState);
   const [rejectState, rejectAction, rejectPending] = useActionState(tolakIzinAction, initialState);
+  const [revisiState, revisiAction, revisiPending] = useActionState(mintaRevisiIzinAction, initialState);
 
   return (
     <li className="rounded-md border border-line bg-paper-raised px-4 py-3.5">
@@ -38,7 +40,7 @@ export default function AdminIzinRow({ izin }: { izin: IzinWithSantri }) {
 
       {izin.status === "MENUNGGU" && (
         <div className="mt-3.5 pt-3.5 border-t border-line">
-          {!showTolak ? (
+          {!showTolak && !showMintaRevisi && (
             <div className="flex items-center gap-3 flex-wrap">
               <form action={approveAction}>
                 <input type="hidden" name="id" value={izin.id} />
@@ -46,10 +48,31 @@ export default function AdminIzinRow({ izin }: { izin: IzinWithSantri }) {
                   {approvePending ? "Memproses..." : "Setujui"}
                 </button>
               </form>
-              <button type="button" onClick={() => setShowTolak(true)} className="text-sm text-clay">Tolak</button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowMintaRevisi(true);
+                  setShowTolak(false);
+                }}
+                className="text-sm text-clay"
+              >
+                Minta Revisi
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowTolak(true);
+                  setShowMintaRevisi(false);
+                }}
+                className="text-sm text-clay"
+              >
+                Tolak
+              </button>
               {approveState.error && <p className="text-sm text-clay">{approveState.error}</p>}
             </div>
-          ) : (
+          )}
+
+          {showTolak && (
             <form action={rejectAction} className="space-y-2.5">
               <input type="hidden" name="id" value={izin.id} />
               <textarea name="catatan" rows={2} required placeholder="Alasan penolakan" className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm resize-none" />
@@ -60,6 +83,25 @@ export default function AdminIzinRow({ izin }: { izin: IzinWithSantri }) {
               </div>
             </form>
           )}
+
+          {showMintaRevisi && (
+            <form action={revisiAction} className="space-y-2.5">
+              <input type="hidden" name="id" value={izin.id} />
+              <textarea name="catatan" rows={2} required placeholder="Apa yang perlu diperbaiki gelara?" className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm resize-none" />
+              {revisiState.error && <p className="text-sm text-clay">{revisiState.error}</p>}
+              <div className="flex gap-3">
+                <button disabled={revisiPending} className="rounded-md bg-clay px-3.5 py-1.5 text-sm font-medium text-paper-raised disabled:opacity-60">{revisiPending ? "Mengirim..." : "Kirim ke gelara"}</button>
+                <button type="button" onClick={() => setShowMintaRevisi(false)} className="text-sm text-ink-soft">Batal</button>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
+
+      {izin.status === "PERLU_REVISI" && (
+        <div className="mt-3.5 pt-3.5 border-t border-line text-sm text-ink-soft">
+          Menunggu gelara merevisi pengajuan ini.
+          {izin.catatan_admin && <p className="mt-1 font-medium text-clay">Catatan Anda: {izin.catatan_admin}</p>}
         </div>
       )}
     </li>
