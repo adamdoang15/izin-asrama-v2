@@ -49,6 +49,74 @@ export async function getIzinCounts(): Promise<Record<string, number>> {
   return counts;
 }
 
+/**
+ * Menghitung jumlah izin per status untuk dashboard pengurus.
+ *
+ * - MENUNGGU, PERLU_REVISI, SUDAH_KEMBALI, DITOLAK
+ *   → dihitung dari pengajuan yang **dibuat hari ini** (filter created_at).
+ * - DISETUJUI
+ *   → dihitung dari pengajuan berstatus DISETUJUI yang **jadwal keluarnya hari ini**
+ *     (filter tanggal_keluar) — bukan yang disetujui/dibuat hari ini.
+ * - SEDANG_KELUAR
+ *   → dihitung dari **semua** baris berstatus SEDANG_KELUAR, tanpa filter
+ *     tanggal, karena maknanya adalah "siapa yang sedang di luar sekarang"
+ *     dan bisa saja izinnya dibuat sebelum hari ini.
+ *
+ * Gunakan helper jakartaDayRange() untuk menghasilkan dayStart & dayEnd.
+ */
+export async function getIzinCountsHariIni(
+  dayStart: string,
+  dayEnd: string
+): Promise<Record<string, number>> {
+  const counts = { MENUNGGU: 0, PERLU_REVISI: 0, DISETUJUI: 0, SEDANG_KELUAR: 0, SUDAH_KEMBALI: 0, DITOLAK: 0 } as Record<string, number>;
+
+  // Query 1: MENUNGGU, PERLU_REVISI, SUDAH_KEMBALI, DITOLAK → dibuat hari ini
+  const { data: todayData, error: todayError } = await supabase
+    .from("izin")
+    .select("status", { count: "exact", head: false })
+    .gte("created_at", dayStart)
+    .lt("created_at", dayEnd);
+
+  if (todayError) {
+    console.error("Gagal mengambil statistik izin hari ini:", todayError.message);
+  } else {
+    const skipStatuses = new Set(["SEDANG_KELUAR", "DISETUJUI"]);
+    for (const row of todayData ?? []) {
+      if (row.status in counts && !skipStatuses.has(row.status)) {
+        counts[row.status]++;
+      }
+    }
+  }
+
+  // Query 2: DISETUJUI → tanggal_keluar hari ini ("yang keluar hari ini")
+  const { count: disetujui, error: dError } = await supabase
+    .from("izin")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "DISETUJUI")
+    .gte("tanggal_keluar", dayStart)
+    .lt("tanggal_keluar", dayEnd);
+
+  if (dError) {
+    console.error("Gagal mengambil jumlah disetujui hari ini:", dError.message);
+  } else {
+    counts.DISETUJUI = disetujui ?? 0;
+  }
+
+  // Query 3: SEDANG_KELUAR → real-time, tanpa filter tanggal
+  const { count: sedangKeluar, error: skError } = await supabase
+    .from("izin")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "SEDANG_KELUAR");
+
+  if (skError) {
+    console.error("Gagal mengambil jumlah sedang keluar:", skError.message);
+  } else {
+    counts.SEDANG_KELUAR = sedangKeluar ?? 0;
+  }
+
+  return counts;
+}
+
 export async function getIzinMenungguPersetujuan(): Promise<IzinRowWithUserJoin[]> {
   const { data, error } = await supabase
     .from("izin")
