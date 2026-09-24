@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { setujuiIzinAction, tolakIzinAction, mintaRevisiIzinAction, type ActionState } from "@/app/admin/actions";
+import { setujuiIzinAction, tolakIzinAction, mintaRevisiIzinAction, hapusIzinAction, type ActionState } from "@/app/admin/actions";
+import EditIzinForm from "@/components/EditIzinForm";
 import StatusPill from "@/components/StatusPill";
 import { formatTanggalWaktu } from "@/lib/format";
 import { JENIS_IZIN_LABEL, type IzinWithSantri } from "@/lib/types";
@@ -11,9 +12,12 @@ const initialState: ActionState = {};
 export default function AdminIzinRow({ izin }: { izin: IzinWithSantri }) {
   const [showTolak, setShowTolak] = useState(false);
   const [showMintaRevisi, setShowMintaRevisi] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showHapus, setShowHapus] = useState(false);
   const [approveState, approveAction, approvePending] = useActionState(setujuiIzinAction, initialState);
   const [rejectState, rejectAction, rejectPending] = useActionState(tolakIzinAction, initialState);
   const [revisiState, revisiAction, revisiPending] = useActionState(mintaRevisiIzinAction, initialState);
+  const [hapusState, hapusAction, hapusPending] = useActionState(hapusIzinAction, initialState);
 
   return (
     <li className="rounded-md border border-line bg-paper-raised px-4 py-3.5">
@@ -104,6 +108,60 @@ export default function AdminIzinRow({ izin }: { izin: IzinWithSantri }) {
           {izin.catatan_admin && <p className="mt-1 font-medium text-clay">Catatan Anda: {izin.catatan_admin}</p>}
         </div>
       )}
+
+      {izin.status !== "DIHAPUS" && (
+        <div className="mt-3.5 pt-3.5 border-t border-line">
+          {!showEdit && !showHapus && (
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => { setShowEdit(true); setShowHapus(false); }}
+                className="text-sm text-teal"
+              >
+                Edit data
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowHapus(true); setShowEdit(false); }}
+                className="text-sm text-clay"
+              >
+                Hapus pengajuan
+              </button>
+            </div>
+          )}
+
+          {showEdit && <EditIzinForm izin={izin} onClose={() => setShowEdit(false)} />}
+
+          {showHapus && (
+            <form action={hapusAction} className="space-y-2.5">
+              <input type="hidden" name="id" value={izin.id} />
+              <p className="text-sm text-clay font-medium">
+                Yakin ingin menghapus pengajuan ini? Pengajuan akan disembunyikan dari daftar aktif.
+              </p>
+              <textarea
+                name="alasan"
+                rows={2}
+                required
+                placeholder="Alasan penghapusan"
+                className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm resize-none"
+              />
+              {hapusState.error && <p className="text-sm text-clay">{hapusState.error}</p>}
+              <div className="flex gap-3">
+                <button
+                  disabled={hapusPending}
+                  className="rounded-md bg-clay px-3.5 py-1.5 text-sm font-medium text-paper-raised disabled:opacity-60"
+                >
+                  {hapusPending ? "Menghapus..." : "Hapus dari daftar"}
+                </button>
+                <button type="button" onClick={() => setShowHapus(false)} className="text-sm text-ink-soft">
+                  Batal
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
     </li>
   );
 }
+

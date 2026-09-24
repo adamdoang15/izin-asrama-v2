@@ -46,6 +46,7 @@ export default function ExportLaporanForm() {
           <option value="SUDAH_KEMBALI">Sudah kembali</option>
           <option value="DITOLAK">Ditolak</option>
           <option value="TIDAK_JADI">Tidak jadi</option>
+          <option value="DIHAPUS">Dihapus</option>
         </select>
       </div>
       <div className="space-y-1">
