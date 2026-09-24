@@ -3,15 +3,25 @@ import { auth } from "@/lib/auth";
 import { getAllUsers, syncBlacklistStatus } from "@/services/user.service";
 import AccountForm from "@/components/AccountForm";
 import AccountRow from "@/components/AccountRow";
+import GelaraSearch from "@/components/GelaraSearch";
 
-export default async function KelolaAkunPage() {
+type SearchParams = Promise<{ q?: string }>;
+
+export default async function KelolaAkunPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await auth();
   if (!session?.user) redirect("/login");
   if (session.user.role !== "PENGURUS") redirect("/beranda");
 
+  const { q } = await searchParams;
+  const query = (q ?? "").trim().toLowerCase();
+
   await syncBlacklistStatus();
   const users = await getAllUsers();
-  const santri = users.filter((u) => u.role === "SANTRI");
+
+  const allSantri = users.filter((u) => u.role === "SANTRI");
+  const santri = query
+    ? allSantri.filter((u) => u.name.toLowerCase().includes(query))
+    : allSantri;
   const petugas = users.filter((u) => u.role === "PENGURUS");
 
   return (
@@ -27,11 +37,18 @@ export default async function KelolaAkunPage() {
       </section>
 
       <section>
-        <h2 className="text-base font-semibold tracking-tight mb-4">
-          Gelara ({santri.length})
-        </h2>
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <h2 className="text-base font-semibold tracking-tight shrink-0">
+            Gelara ({query ? `${santri.length} dari ${allSantri.length}` : allSantri.length})
+          </h2>
+        </div>
+        <div className="mb-4">
+          <GelaraSearch />
+        </div>
         {santri.length === 0 ? (
-          <p className="text-sm text-ink-soft">Belum ada akun gelara.</p>
+          <p className="text-sm text-ink-soft">
+            {query ? `Tidak ada gelara dengan nama "${q}".` : "Belum ada akun gelara."}
+          </p>
         ) : (
           <ul className="space-y-3">
             {santri.map((account) => (
