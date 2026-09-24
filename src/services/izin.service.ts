@@ -80,7 +80,7 @@ export async function getIzinCountsHariIni(
   if (todayError) {
     console.error("Gagal mengambil statistik izin hari ini:", todayError.message);
   } else {
-    const skipStatuses = new Set(["SEDANG_KELUAR", "DISETUJUI"]);
+    const skipStatuses = new Set(["SEDANG_KELUAR", "DISETUJUI", "SUDAH_KEMBALI"]);
     for (const row of todayData ?? []) {
       if (row.status in counts && !skipStatuses.has(row.status)) {
         counts[row.status]++;
@@ -112,6 +112,20 @@ export async function getIzinCountsHariIni(
     console.error("Gagal mengambil jumlah sedang keluar:", skError.message);
   } else {
     counts.SEDANG_KELUAR = sedangKeluar ?? 0;
+  }
+
+  // Query 4: SUDAH_KEMBALI → kembali hari ini
+  const { count: sudahKembali, error: rError } = await supabase
+    .from("izin")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "SUDAH_KEMBALI")
+    .gte("returned_at", dayStart)
+    .lt("returned_at", dayEnd);
+
+  if (rError) {
+    console.error("Gagal mengambil jumlah sudah kembali hari ini:", rError.message);
+  } else {
+    counts.SUDAH_KEMBALI = sudahKembali ?? 0;
   }
 
   return counts;
