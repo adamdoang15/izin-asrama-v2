@@ -1,7 +1,6 @@
 
 import Link from "next/link";
 import { auth, signOut } from "@/lib/auth";
-import NavLinks from "./NavLinks";
 import UserMenu from "./UserMenu";
 
 export default async function TopNav() {
@@ -10,25 +9,6 @@ export default async function TopNav() {
 
   const { name, role, kamar } = session.user;
   const isPengurus = role === "PENGURUS";
-
-  const navItems: {
-    href: string;
-    label: string;
-    icon: "dashboard" | "users";
-  }[] = [
-    { href: "/beranda", label: "Beranda", icon: "dashboard" },
-    ...(isPengurus
-      ? [
-          {
-            href: "/kelola-akun",
-            label: "Kelola akun",
-            icon: "users" as const,
-          },
-        ]
-      : []),
-  ];
-
-  const showNav = navItems.length > 1;
 
   const subtitle = kamar ? kamar : isPengurus ? "Mentor" : "Gelara";
 
@@ -51,33 +31,21 @@ export default async function TopNav() {
             alt="Logo Izin Asrama"
             className="h-8 w-8 object-contain"
           />
-
           <p className="text-[15px] font-semibold tracking-tight">
             Izin Asrama
           </p>
         </Link>
 
-        {showNav && (
-          <div className="hidden md:flex">
-            <NavLinks items={navItems} />
-          </div>
-        )}
-
         <UserMenu
           name={name ?? "Pengguna"}
           subtitle={subtitle}
-          showSearch={isPengurus}
-          pengaturanHref={!isPengurus ? "/pengaturan" : undefined}
+          berandaHref="/beranda"
           kelolaAkunHref={isPengurus ? "/kelola-akun" : undefined}
+          pengaturanHref={!isPengurus ? "/pengaturan" : undefined}
+          showEkspor={isPengurus}
           onSignOut={handleSignOut}
         />
       </div>
-
-      {showNav && (
-        <div className="border-t border-line px-4 py-2 md:hidden">
-          <NavLinks items={navItems} />
-        </div>
-      )}
     </header>
   );
 }
