@@ -30,7 +30,9 @@ export default function AdminIzinRow({ izin }: { izin: IzinWithSantri }) {
           <p className="text-xs text-ink-soft mt-2">Keluar: {formatTanggalWaktu(izin.tanggal_keluar)}</p>
           <p className="text-xs text-ink-soft">Batas kembali: {formatTanggalWaktu(izin.perkiraan_kembali)}</p>
           {izin.approved_by && izin.nama_penyetuju && (
-            <p className="text-xs text-sage mt-2">Disetujui oleh {izin.nama_penyetuju} · {formatTanggalWaktu(izin.approved_at)}</p>
+            <p className={`text-xs mt-2 ${izin.status === "DITOLAK" ? "text-clay" : "text-sage"}`}>
+              {izin.status === "DITOLAK" ? "Ditolak" : "Disetujui"} oleh {izin.nama_penyetuju} · {formatTanggalWaktu(izin.approved_at)}
+            </p>
           )}
           {izin.returned_at && (
             <p className={`text-xs mt-1 ${izin.return_status === "TERLAMBAT" ? "text-clay" : "text-sage"}`}>
