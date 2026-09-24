@@ -20,6 +20,7 @@ export async function getRiwayatIzinSantri(userId: number): Promise<IzinRowWithU
     .from("izin")
     .select("*, approved_by_user:users!izin_approved_by_fkey(name)")
     .eq("user_id", userId)
+    .neq("status", "DIHAPUS")
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -74,7 +75,11 @@ export async function fetchPagedIzin(
     .order("created_at", { ascending: false })
     .range((page - 1) * pageSize, page * pageSize - 1);
 
-  if (status) query = query.eq("status", status);
+  if (status) {
+    query = query.eq("status", status);
+  } else {
+    query = query.neq("status", "DIHAPUS");
+  }
   if (q) {
     const { data: users } = await supabase.from("users").select("id").ilike("name", `%${q}%`).eq("role", "SANTRI");
     const userIds = (users ?? []).map((u) => u.id);
@@ -473,6 +478,127 @@ export async function markIzinReturned(
     body: `${santriName} telah kembali ke asrama (${statusText}).`,
     url: "/beranda",
   }).catch((err) => console.error("Gagal mengirim notifikasi kepulangan:", err));
+
+  return {};
+}
+
+export async function getIzinFullById(id: number) {
+  const { data, error } = await supabase
+    .from("izin")
+    .select("id, user_id, status, jenis_izin, alasan, tujuan, tanggal_keluar, perkiraan_kembali")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data;
+}
+
+export interface EditIzinInput {
+  jenis_izin: JenisIzin;
+  alasan: string;
+  tujuan: string;
+  tanggal_keluar: string;
+  perkiraan_kembali: string;
+}
+
+export async function editIzinByPengurus(
+  id: number,
+  actorId: number,
+  catatanPerubahan: string,
+  input: EditIzinInput
+): Promise<{ error?: string }> {
+  const before = await getIzinFullById(id);
+  if (!before) return { error: "Pengajuan tidak ditemukan." };
+  if (before.status === "DIHAPUS") return { error: "Pengajuan ini sudah dihapus, tidak bisa diedit." };
+
+  const now = new Date().toISOString();
+
+  const { error } = await supabase
+    .from("izin")
+    .update({
+      jenis_izin: input.jenis_izin,
+      alasan: input.alasan,
+      tujuan: input.tujuan,
+      tanggal_keluar: input.tanggal_keluar,
+      perkiraan_kembali: input.perkiraan_kembali,
+      updated_at: now,
+    })
+    .eq("id", id)
+    .neq("status", "DIHAPUS"); // jaga-jaga race condition, sama seperti pola approveIzin
+
+  if (error) return { error: `Gagal menyimpan perubahan: ${error.message}` };
+
+  await supabase.from("izin_logs").insert({
+    izin_id: id,
+    actor_id: actorId,
+    action: "EDIT_PENGURUS",
+    old_status: before.status,
+    new_status: before.status, // status tidak berubah
+    catatan: catatanPerubahan,
+    data_sebelum: {
+      jenis_izin: before.jenis_izin,
+      alasan: before.alasan,
+      tujuan: before.tujuan,
+      tanggal_keluar: before.tanggal_keluar,
+      perkiraan_kembali: before.perkiraan_kembali,
+    },
+    data_sesudah: {
+      jenis_izin: input.jenis_izin,
+      alasan: input.alasan,
+      tujuan: input.tujuan,
+      tanggal_keluar: input.tanggal_keluar,
+      perkiraan_kembali: input.perkiraan_kembali,
+    },
+  });
+
+  await sendNotificationToUser(before.user_id, {
+    title: "Data Pengajuan Izin Diperbarui Petugas",
+    body: `Petugas memperbarui data pengajuan izin Anda. Alasan: ${catatanPerubahan}`,
+    url: "/beranda",
+  }).catch((err) => console.error("Gagal mengirim notifikasi edit oleh pengurus:", err));
+
+  return {};
+}
+
+export async function deleteIzinByPengurus(
+  id: number,
+  actorId: number,
+  alasanHapus: string
+): Promise<{ error?: string }> {
+  const before = await getIzinFullById(id);
+  if (!before) return { error: "Pengajuan tidak ditemukan." };
+  if (before.status === "DIHAPUS") return { error: "Pengajuan ini sudah dihapus sebelumnya." };
+
+  const now = new Date().toISOString();
+
+  const { error } = await supabase
+    .from("izin")
+    .update({
+      status: "DIHAPUS",
+      catatan_admin: alasanHapus,
+      deleted_by: actorId,
+      deleted_at: now,
+      updated_at: now,
+    })
+    .eq("id", id)
+    .neq("status", "DIHAPUS"); // jaga-jaga race condition (klik dobel / dua tab)
+
+  if (error) return { error: `Gagal menghapus pengajuan: ${error.message}` };
+
+  await supabase.from("izin_logs").insert({
+    izin_id: id,
+    actor_id: actorId,
+    action: "HAPUS_PENGURUS",
+    old_status: before.status,
+    new_status: "DIHAPUS",
+    catatan: alasanHapus,
+  });
+
+  await sendNotificationToUser(before.user_id, {
+    title: "Pengajuan Izin Dihapus Petugas",
+    body: `Petugas menghapus pengajuan izin Anda. Alasan: ${alasanHapus}`,
+    url: "/beranda",
+  }).catch((err) => console.error("Gagal mengirim notifikasi hapus oleh pengurus:", err));
 
   return {};
 }

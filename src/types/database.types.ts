@@ -60,13 +60,15 @@ export type Database = {
           tujuan: string
           tanggal_keluar: string
           perkiraan_kembali: string
-          status: "MENUNGGU" | "PERLU_REVISI" | "DISETUJUI" | "DITOLAK" | "SEDANG_KELUAR" | "SUDAH_KEMBALI" | "TIDAK_JADI"
+          status: "MENUNGGU" | "PERLU_REVISI" | "DISETUJUI" | "DITOLAK" | "SEDANG_KELUAR" | "SUDAH_KEMBALI" | "TIDAK_JADI" | "DIHAPUS"
           catatan_admin: string | null
           approved_by: number | null
           approved_at: string | null
           returned_at: string | null
           return_status: "TEPAT_WAKTU" | "TERLAMBAT" | null
           late_minutes: number | null
+          deleted_by: number | null
+          deleted_at: string | null
           created_at: string
           updated_at: string
         }
@@ -78,13 +80,15 @@ export type Database = {
           tujuan: string
           tanggal_keluar: string
           perkiraan_kembali: string
-          status?: "MENUNGGU" | "PERLU_REVISI" | "DISETUJUI" | "DITOLAK" | "SEDANG_KELUAR" | "SUDAH_KEMBALI" | "TIDAK_JADI"
+          status?: "MENUNGGU" | "PERLU_REVISI" | "DISETUJUI" | "DITOLAK" | "SEDANG_KELUAR" | "SUDAH_KEMBALI" | "TIDAK_JADI" | "DIHAPUS"
           catatan_admin?: string | null
           approved_by?: number | null
           approved_at?: string | null
           returned_at?: string | null
           return_status?: "TEPAT_WAKTU" | "TERLAMBAT" | null
           late_minutes?: number | null
+          deleted_by?: number | null
+          deleted_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -96,13 +100,15 @@ export type Database = {
           tujuan?: string
           tanggal_keluar?: string
           perkiraan_kembali?: string
-          status?: "MENUNGGU" | "PERLU_REVISI" | "DISETUJUI" | "DITOLAK" | "SEDANG_KELUAR" | "SUDAH_KEMBALI" | "TIDAK_JADI"
+          status?: "MENUNGGU" | "PERLU_REVISI" | "DISETUJUI" | "DITOLAK" | "SEDANG_KELUAR" | "SUDAH_KEMBALI" | "TIDAK_JADI" | "DIHAPUS"
           catatan_admin?: string | null
           approved_by?: number | null
           approved_at?: string | null
           returned_at?: string | null
           return_status?: "TEPAT_WAKTU" | "TERLAMBAT" | null
           late_minutes?: number | null
+          deleted_by?: number | null
+          deleted_at?: string | null
           created_at?: string
           updated_at?: string
         }

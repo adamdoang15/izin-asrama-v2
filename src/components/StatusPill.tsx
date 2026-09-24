@@ -8,6 +8,7 @@ const STATUS_CONFIG: Record<StatusIzin, { label: string; dot: string; text: stri
   SEDANG_KELUAR: { label: "Sedang keluar", dot: "bg-teal", text: "text-teal" },
   SUDAH_KEMBALI: { label: "Sudah kembali", dot: "bg-sage", text: "text-sage" },
   TIDAK_JADI: { label: "Tidak jadi", dot: "bg-ink-soft", text: "text-ink-soft" },
+  DIHAPUS: { label: "Dihapus", dot: "bg-ink-soft", text: "text-ink-soft" },
 };
 
 export default function StatusPill({ status }: { status: StatusIzin }) {

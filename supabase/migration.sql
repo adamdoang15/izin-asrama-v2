@@ -89,4 +89,20 @@ end $$;
 alter table public.izin add constraint izin_status_v5
   check (status in ('MENUNGGU','PERLU_REVISI','DISETUJUI','DITOLAK','SEDANG_KELUAR','SUDAH_KEMBALI','TIDAK_JADI'));
 
+-- Perubahan alur V6: Fitur Edit & Hapus pengajuan izin oleh pengurus
+alter table public.izin add column if not exists deleted_by bigint references public.users(id) on delete set null;
+alter table public.izin add column if not exists deleted_at timestamptz;
+
+-- Sama seperti pola migrasi status sebelumnya: lepas dulu constraint lama.
+do $$
+declare r record;
+begin
+  for r in select conname from pg_constraint where conrelid = 'public.izin'::regclass and contype = 'c' and pg_get_constraintdef(oid) ilike '%status%' and pg_get_constraintdef(oid) ilike '%MENUNGGU%' loop
+    execute format('alter table public.izin drop constraint if exists %I', r.conname);
+  end loop;
+end $$;
+
+alter table public.izin add constraint izin_status_v6
+  check (status in ('MENUNGGU','PERLU_REVISI','DISETUJUI','DITOLAK','SEDANG_KELUAR','SUDAH_KEMBALI','TIDAK_JADI','DIHAPUS'));
+
 
