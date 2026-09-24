@@ -48,6 +48,21 @@ export async function getIzinCounts(): Promise<Record<string, number>> {
   return counts;
 }
 
+export async function getIzinMenungguPersetujuan(): Promise<IzinRowWithUserJoin[]> {
+  const { data, error } = await supabase
+    .from("izin")
+    .select("*, users!izin_user_id_fkey(name, kamar), approved_by_user:users!izin_approved_by_fkey(name)")
+    .eq("status", "MENUNGGU")
+    .order("created_at", { ascending: true })
+    .limit(50);
+
+  if (error) {
+    console.error("Gagal mengambil pengajuan yang menunggu persetujuan:", error.message);
+    return [];
+  }
+  return (data ?? []) as unknown as IzinRowWithUserJoin[];
+}
+
 export async function getIzinKeluarHariIni(dayStart: string, dayEnd: string): Promise<IzinRowWithUserJoin[]> {
   const { data, error } = await supabase
     .from("izin")

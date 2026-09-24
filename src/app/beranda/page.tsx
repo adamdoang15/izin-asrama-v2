@@ -15,6 +15,7 @@ import {
   getRiwayatIzinSantri,
   getIzinCounts,
   getIzinKeluarHariIni,
+  getIzinMenungguPersetujuan,
   fetchPagedIzin,
 } from "@/services/izin.service";
 import { getUserById } from "@/services/user.service";
@@ -60,13 +61,14 @@ async function BerandaPengurus({ searchParams }: { searchParams: SearchParams })
 
   await syncScheduledIzinStatuses();
 
-  const [counts, todayRowsRaw, listResult] = await Promise.all([
+  const [counts, pendingRowsRaw, todayRowsRaw, listResult] = await Promise.all([
     getIzinCounts(),
+    getIzinMenungguPersetujuan(),
     getIzinKeluarHariIni(dayStart, dayEnd),
     fetchPagedIzin(page, PAGE_SIZE, status, q),
   ]);
 
-  const todayRows = mapRows(todayRowsRaw);
+  const todayRows = [...mapRows(pendingRowsRaw), ...mapRows(todayRowsRaw)];
   const rows = mapRows(listResult.data);
   const total = listResult.count;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -76,7 +78,7 @@ async function BerandaPengurus({ searchParams }: { searchParams: SearchParams })
       <div className="mb-4"><p className="text-xs text-ink-soft mb-2 font-medium">Ekspor laporan</p><ExportLaporanForm /></div>
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3"><Stat label="Menunggu" value={counts.MENUNGGU ?? 0} tone="amber"/><Stat label="Perlu revisi" value={counts.PERLU_REVISI ?? 0} tone="clay"/><Stat label="Disetujui" value={counts.DISETUJUI ?? 0} tone="sage"/><Stat label="Sedang keluar" value={counts.SEDANG_KELUAR ?? 0} tone="teal"/><Stat label="Sudah kembali" value={counts.SUDAH_KEMBALI ?? 0} tone="sage"/><Stat label="Ditolak" value={counts.DITOLAK ?? 0} tone="clay"/></div>
     </section>
-    <section><h2 className="text-base font-semibold mb-4">Keluar hari ini</h2>{todayRows.length === 0 ? <p className="text-sm text-ink-soft">Tidak ada gelara yang sedang/terjadwal keluar hari ini.</p> : <ul className="space-y-3">{todayRows.map(i => <AdminIzinRow key={i.id} izin={i}/>)}</ul>}</section>
+    <section><h2 className="text-base font-semibold mb-4">Keluar hari ini</h2>{todayRows.length === 0 ? <p className="text-sm text-ink-soft">Tidak ada pengajuan baru maupun gelara yang sedang/terjadwal keluar hari ini.</p> : <ul className="space-y-3">{todayRows.map(i => <AdminIzinRow key={i.id} izin={i}/>)}</ul>}</section>
     <section><div className="flex items-center justify-between mb-4"><div><h2 className="text-base font-semibold">Semua pengajuan</h2><p className="text-xs text-ink-soft mt-1">{total} data ditemukan.</p></div></div>
       <form method="get" className="grid grid-cols-1 sm:grid-cols-[1fr_180px_auto] gap-2 mb-4"><input name="q" defaultValue={q} placeholder="Cari nama gelara..." className="rounded-md border border-line bg-paper-raised px-3 py-2 text-sm"/><select name="status" defaultValue={status ?? ""} className="rounded-md border border-line bg-paper-raised px-3 py-2 text-sm"><option value="">Semua status</option>{["MENUNGGU","PERLU_REVISI","DISETUJUI","SEDANG_KELUAR","SUDAH_KEMBALI","DITOLAK","DIHAPUS"].map(s => <option key={s} value={s}>{s.replaceAll("_", " ")}</option>)}</select><button className="rounded-md bg-teal px-4 py-2 text-sm font-medium text-paper-raised">Filter</button></form>
       {rows.length === 0 ? <p className="text-sm text-ink-soft">Belum ada data yang cocok.</p> : <ul className="space-y-3">{rows.map(i => <AdminIzinRow key={i.id} izin={i}/>)}</ul>}
