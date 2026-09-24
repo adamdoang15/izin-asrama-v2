@@ -13,6 +13,7 @@ import {
   markIzinReturned,
   submitIzinRevision,
 } from "@/services/izin.service";
+import { syncBlacklistStatus } from "@/services/user.service";
 
 const jenisIzinSchema = z.enum(["HARIAN", "MENGINAP", "REKREASI", "KELUARGA", "DARURAT"]);
 
@@ -72,7 +73,7 @@ export async function ajukanIzinAction(
     return { error: "Waktu keluar tidak boleh berada jauh di masa lalu." };
   }
 
-  await syncScheduledIzinStatuses();
+  await Promise.all([syncScheduledIzinStatuses(), syncBlacklistStatus()]);
 
   const conflict = await checkActiveIzinConflict(Number(session.user.id), tanggalKeluarISO, perkiraanKembaliISO);
   if (conflict.error) return { error: conflict.error };

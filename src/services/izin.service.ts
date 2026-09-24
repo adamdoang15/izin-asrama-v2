@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { formatTanggal, jakartaDateParts } from "@/lib/format";
 import type { IzinRowWithUserJoin, StatusIzin, JenisIzin } from "@/lib/types";
 import { sendNotificationToPengurus, sendNotificationToUser } from "@/services/notification.service";
 
@@ -179,7 +180,7 @@ export async function createIzin(
   // Check blacklist status
   const { data: user, error: userError } = await supabase
     .from("users")
-    .select("is_blacklisted, blacklist_reason")
+    .select("is_blacklisted, blacklist_reason, blacklist_until")
     .eq("id", userId)
     .single();
 
@@ -187,9 +188,16 @@ export async function createIzin(
     return { error: `Gagal mengonfirmasi status pengguna: ${userError.message}` };
   }
 
-  if (user?.is_blacklisted) {
-    const reasonText = user.blacklist_reason ? ` (Alasan: ${user.blacklist_reason})` : "";
-    return { error: `Anda sedang diblacklist dan tidak dapat mengajukan izin keluar${reasonText}.` };
+  const { year, month, day } = jakartaDateParts();
+  const todayStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  const isCurrentlyBlacklisted =
+    Boolean(user?.is_blacklisted) &&
+    (!user?.blacklist_until || user.blacklist_until >= todayStr);
+
+  if (isCurrentlyBlacklisted) {
+    const reasonText = user?.blacklist_reason ? ` (Alasan: ${user.blacklist_reason})` : "";
+    const untilText = user?.blacklist_until ? ` sampai ${formatTanggal(user.blacklist_until)}` : "";
+    return { error: `Anda sedang diblacklist${untilText} dan tidak dapat mengajukan izin keluar${reasonText}.` };
   }
 
   const { data: inserted, error } = await supabase

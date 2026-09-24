@@ -20,6 +20,8 @@ export type Database = {
           is_active: boolean
           is_blacklisted: boolean
           blacklist_reason: string | null
+          blacklist_until: string | null
+          blacklisted_at: string | null
           created_at: string
           updated_at: string
         }
@@ -33,6 +35,8 @@ export type Database = {
           is_active?: boolean
           is_blacklisted?: boolean
           blacklist_reason?: string | null
+          blacklist_until?: string | null
+          blacklisted_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -46,6 +50,8 @@ export type Database = {
           is_active?: boolean
           is_blacklisted?: boolean
           blacklist_reason?: string | null
+          blacklist_until?: string | null
+          blacklisted_at?: string | null
           created_at?: string
           updated_at?: string
         }

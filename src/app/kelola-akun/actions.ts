@@ -4,6 +4,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
+import { jakartaDateParts } from "@/lib/format";
 import {
   checkUsernameExists,
   createUser,
@@ -90,13 +91,31 @@ export async function toggleBlacklistAction(_prev: AccountActionState, formData:
   if (String(id) === session.user.id) return { error: "Anda tidak dapat mem-blacklist akun sendiri." };
   
   const isBlacklisted = formData.get("is_blacklisted") === "true";
-  const blacklistReason = formData.get("reason") ? String(formData.get("reason")).trim() : null;
 
-  if (isBlacklisted && !blacklistReason) {
-    return { error: "Alasan blacklist wajib diisi." };
+  if (!isBlacklisted) {
+    const result = await toggleBlacklistStatus(id, false, null, null);
+    if (result.error) return { error: result.error };
+    revalidatePath("/kelola-akun");
+    return { success: true };
   }
 
-  const result = await toggleBlacklistStatus(id, isBlacklisted, blacklistReason);
+  const reason = formData.get("reason") ? String(formData.get("reason")).trim() : "";
+  if (!reason || reason.length < 3) {
+    return { error: "Alasan blacklist wajib diisi minimal 3 karakter." };
+  }
+
+  const blacklistUntil = formData.get("blacklist_until") ? String(formData.get("blacklist_until")).trim() : "";
+  if (!blacklistUntil || !/^\d{4}-\d{2}-\d{2}$/.test(blacklistUntil)) {
+    return { error: "Tanggal berakhir blacklist wajib diisi." };
+  }
+
+  const { year, month, day } = jakartaDateParts();
+  const todayStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  if (blacklistUntil <= todayStr) {
+    return { error: "Tanggal berakhir blacklist harus di masa depan (minimal besok)." };
+  }
+
+  const result = await toggleBlacklistStatus(id, true, reason, blacklistUntil);
   if (result.error) return { error: result.error };
 
   revalidatePath("/kelola-akun");

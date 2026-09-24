@@ -7,6 +7,7 @@ import {
   toggleBlacklistAction,
   type AccountActionState,
 } from "@/app/kelola-akun/actions";
+import { formatTanggal } from "@/lib/format";
 import type { UserRow } from "@/lib/types";
 
 const initialState: AccountActionState = {};
@@ -17,6 +18,10 @@ export default function AccountRow({ account, isSelf }: { account: UserRow; isSe
   const [updateState, updateAction, updatePending] = useActionState(updateAccountAction, initialState);
   const [toggleState, toggleAction, togglePending] = useActionState(toggleAccountAction, initialState);
   const [blacklistState, blacklistAction, blacklistPending] = useActionState(toggleBlacklistAction, initialState);
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const minTomorrow = tomorrow.toISOString().split("T")[0];
 
   return (
     <li className={`rounded-md border border-line bg-paper-raised px-4 py-3.5 ${!account.is_active ? "opacity-60" : ""}`}>
@@ -29,7 +34,9 @@ export default function AccountRow({ account, isSelf }: { account: UserRow; isSe
             </p>
             {account.is_blacklisted && (
               <span className="inline-flex items-center rounded-full bg-clay/10 px-2 py-0.5 text-xs font-medium text-clay border border-clay/20">
-                Diblacklist
+                {account.blacklist_until
+                  ? `Diblacklist sampai ${formatTanggal(account.blacklist_until)}`
+                  : "Diblacklist"}
               </span>
             )}
           </div>
@@ -42,10 +49,19 @@ export default function AccountRow({ account, isSelf }: { account: UserRow; isSe
               {account.is_active ? "Aktif" : "Nonaktif"}
             </span>
           </div>
-          {account.is_blacklisted && account.blacklist_reason && (
-            <p className="text-xs text-clay mt-1.5 bg-clay/5 p-2 rounded border border-clay/10">
-              <span className="font-semibold">Alasan blacklist:</span> {account.blacklist_reason}
-            </p>
+          {account.is_blacklisted && (account.blacklist_reason || account.blacklist_until) && (
+            <div className="text-xs text-clay mt-1.5 bg-clay/5 p-2 rounded border border-clay/10 space-y-0.5">
+              {account.blacklist_until && (
+                <p>
+                  <span className="font-semibold">Berlaku sampai:</span> {formatTanggal(account.blacklist_until)}
+                </p>
+              )}
+              {account.blacklist_reason && (
+                <p>
+                  <span className="font-semibold">Alasan blacklist:</span> {account.blacklist_reason}
+                </p>
+              )}
+            </div>
           )}
         </div>
         <button
@@ -147,18 +163,32 @@ export default function AccountRow({ account, isSelf }: { account: UserRow; isSe
                         <form action={blacklistAction} className="mt-2 space-y-2 bg-clay/5 p-3 rounded-md border border-clay/20">
                           <input type="hidden" name="id" value={account.id} />
                           <input type="hidden" name="is_blacklisted" value="true" />
-                          <label className="block text-xs font-semibold text-clay">
-                            Alasan Blacklist (wajib)
-                          </label>
-                          <textarea
-                            name="reason"
-                            required
-                            rows={2}
-                            placeholder="Contoh: Terlambat kembali 3x berturut-turut"
-                            className="w-full rounded-md border border-line bg-paper px-3 py-1.5 text-sm resize-none"
-                          />
+                          <div className="space-y-1">
+                            <label className="block text-xs font-semibold text-clay">
+                              Blacklist sampai tanggal (wajib)
+                            </label>
+                            <input
+                              type="date"
+                              name="blacklist_until"
+                              required
+                              min={minTomorrow}
+                              className="w-full rounded-md border border-line bg-paper px-3 py-1.5 text-sm outline-none focus:border-clay focus:ring-1 focus:ring-clay"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="block text-xs font-semibold text-clay">
+                              Alasan Blacklist (wajib)
+                            </label>
+                            <textarea
+                              name="reason"
+                              required
+                              rows={2}
+                              placeholder="Contoh: Terlambat kembali 3x berturut-turut"
+                              className="w-full rounded-md border border-line bg-paper px-3 py-1.5 text-sm resize-none outline-none focus:border-clay focus:ring-1 focus:ring-clay"
+                            />
+                          </div>
                           {blacklistState.error && <p className="text-xs text-clay">{blacklistState.error}</p>}
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 pt-1">
                             <button
                               disabled={blacklistPending}
                               className="rounded-md bg-clay px-3 py-1 text-xs font-medium text-white disabled:opacity-60"
