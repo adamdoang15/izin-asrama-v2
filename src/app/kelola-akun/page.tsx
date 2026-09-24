@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getAllUsers } from "@/services/user.service";
+import { getAllUsers, syncBlacklistStatus } from "@/services/user.service";
 import AccountForm from "@/components/AccountForm";
 import AccountRow from "@/components/AccountRow";
 
@@ -9,6 +9,7 @@ export default async function KelolaAkunPage() {
   if (!session?.user) redirect("/login");
   if (session.user.role !== "PENGURUS") redirect("/beranda");
 
+  await syncBlacklistStatus();
   const users = await getAllUsers();
   const santri = users.filter((u) => u.role === "SANTRI");
   const petugas = users.filter((u) => u.role === "PENGURUS");

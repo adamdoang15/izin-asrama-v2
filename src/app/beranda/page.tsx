@@ -6,7 +6,7 @@ import { JENIS_IZIN_LABEL } from "@/lib/types";
 import IzinForm from "@/components/IzinForm";
 import StatusPill from "@/components/StatusPill";
 import AdminIzinRow from "@/components/AdminIzinRow";
-import { formatTanggalWaktu, jakartaDayRange } from "@/lib/format";
+import { formatTanggalWaktu, jakartaDayRange, jakartaDateParts } from "@/lib/format";
 import ReturnIzinButton from "@/components/ReturnIzinButton";
 import RevisiIzinForm from "@/components/RevisiIzinForm";
 import ExportLaporanForm from "@/components/ExportLaporanForm";
@@ -18,7 +18,7 @@ import {
   getIzinMenungguPersetujuan,
   fetchPagedIzin,
 } from "@/services/izin.service";
-import { getUserById } from "@/services/user.service";
+import { getUserById, syncBlacklistStatus } from "@/services/user.service";
 
 const PAGE_SIZE = 20;
 
@@ -33,14 +33,18 @@ export default async function BerandaPage({ searchParams }: { searchParams: Sear
 }
 
 async function BerandaSantri({ userId }: { userId: number }) {
-  await syncScheduledIzinStatuses();
+  await Promise.all([syncScheduledIzinStatuses(), syncBlacklistStatus()]);
   const [riwayat, user] = await Promise.all([
     getRiwayatIzinSantri(userId),
     getUserById(userId),
   ]);
 
+  const { year, month, day } = jakartaDateParts();
+  const todayStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  const isBlacklisted = Boolean(user?.is_blacklisted) && (!user?.blacklist_until || user.blacklist_until >= todayStr);
+
   return <main className="flex-1 max-w-3xl mx-auto w-full px-6 py-8 space-y-8">
-    <section><h2 className="text-base font-semibold mb-1">Ajukan izin keluar</h2><p className="text-sm text-ink-soft mb-4">Pilih jenis izin, isi tujuan dan waktu, lalu tunggu persetujuan petugas.</p><IzinForm isBlacklisted={user?.is_blacklisted} blacklistReason={user?.blacklist_reason} /></section>
+    <section><h2 className="text-base font-semibold mb-1">Ajukan izin keluar</h2><p className="text-sm text-ink-soft mb-4">Pilih jenis izin, isi tujuan dan waktu, lalu tunggu persetujuan petugas.</p><IzinForm isBlacklisted={isBlacklisted} blacklistReason={user?.blacklist_reason} blacklistUntil={user?.blacklist_until} /></section>
     <section><h2 className="text-base font-semibold mb-4">Riwayat pengajuan</h2>{riwayat.length === 0 ? <p className="text-sm text-ink-soft">Belum ada pengajuan izin.</p> : <ul className="space-y-3">{riwayat.map((izin) => {
       const approver = izin.approved_by_user?.name ?? null;
       return <li key={izin.id} className="rounded-md border border-line bg-paper-raised px-4 py-3.5">
@@ -59,7 +63,7 @@ async function BerandaPengurus({ searchParams }: { searchParams: SearchParams })
   const q = (params.q ?? "").trim();
   const { start: dayStart, end: dayEnd } = jakartaDayRange();
 
-  await syncScheduledIzinStatuses();
+  await Promise.all([syncScheduledIzinStatuses(), syncBlacklistStatus()]);
 
   const [counts, pendingRowsRaw, todayRowsRaw, listResult] = await Promise.all([
     getIzinCounts(),

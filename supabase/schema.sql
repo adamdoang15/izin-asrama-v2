@@ -11,6 +11,8 @@ create table if not exists public.users (
   is_active boolean not null default true,
   is_blacklisted boolean not null default false,
   blacklist_reason text,
+  blacklist_until date,
+  blacklisted_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

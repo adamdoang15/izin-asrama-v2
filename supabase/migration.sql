@@ -105,4 +105,9 @@ end $$;
 alter table public.izin add constraint izin_status_v6
   check (status in ('MENUNGGU','PERLU_REVISI','DISETUJUI','DITOLAK','SEDANG_KELUAR','SUDAH_KEMBALI','TIDAK_JADI','DIHAPUS'));
 
+-- Perubahan alur V7: Tanggal Berakhir (Expiry Date) pada Fitur Blacklist
+alter table public.users add column if not exists blacklist_until date;
+alter table public.users add column if not exists blacklisted_at timestamptz;
+
+
 

@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { jakartaDateParts } from "@/lib/format";
 import type { Database } from "@/types/database.types";
 import type { UserRow } from "@/lib/types";
 
@@ -91,17 +92,41 @@ export async function toggleUserStatus(id: number, newStatus: boolean): Promise<
   return {};
 }
 
+export async function syncBlacklistStatus(): Promise<void> {
+  const { year, month, day } = jakartaDateParts();
+  const todayStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  const { error } = await supabase
+    .from("users")
+    .update({
+      is_blacklisted: false,
+      blacklist_reason: null,
+      blacklist_until: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("is_blacklisted", true)
+    .not("blacklist_until", "is", null)
+    .lt("blacklist_until", todayStr);
+
+  if (error) {
+    console.error("Gagal menyinkronkan status blacklist otomatis:", error.message);
+  }
+}
+
 export async function toggleBlacklistStatus(
   id: number,
   isBlacklisted: boolean,
-  reason?: string | null
+  reason?: string | null,
+  blacklistUntil?: string | null
 ): Promise<{ error?: string }> {
+  const now = new Date().toISOString();
   const { error } = await supabase
     .from("users")
     .update({
       is_blacklisted: isBlacklisted,
       blacklist_reason: isBlacklisted ? reason ?? null : null,
-      updated_at: new Date().toISOString(),
+      blacklist_until: isBlacklisted ? blacklistUntil ?? null : null,
+      blacklisted_at: isBlacklisted ? now : null,
+      updated_at: now,
     })
     .eq("id", id);
 
