@@ -28,13 +28,6 @@ export default async function PublicNav() {
         {session?.user ? (
           <nav className="flex items-center gap-5">
             <Link
-              href="/panduan"
-              className="text-sm text-ink-soft hover:text-ink transition-colors"
-            >
-              Panduan SOP
-            </Link>
-
-            <Link
               href="/beranda"
               className="text-sm text-ink-soft hover:text-ink transition-colors"
             >
@@ -59,12 +52,6 @@ export default async function PublicNav() {
           </nav>
         ) : (
           <div className="flex items-center gap-5">
-            <Link
-              href="/panduan"
-              className="text-sm text-ink-soft hover:text-ink transition-colors"
-            >
-              Panduan SOP
-            </Link>
             <ThemeToggle />
             <Link
               href="/login"
