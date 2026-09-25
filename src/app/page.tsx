@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
 import PublicNav from "@/components/PublicNav";
 import StatsLanding from "@/components/StatsLanding";
 import { supabase } from "@/lib/supabase";
-
-export const revalidate = 300; // Cache selama 5 menit (ISR)
 
 export const metadata: Metadata = {
   title: "Perizinan Gelara | Izin Asrama",
@@ -15,6 +15,11 @@ export const metadata: Metadata = {
 };
 
 export default async function LandingPage() {
+  const session = await auth();
+  if (session?.user) {
+    redirect("/beranda");
+  }
+
   // Only pull the last 5 years of history, capped at 5000 rows.
   const fiveYearsAgo = new Date();
   fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
