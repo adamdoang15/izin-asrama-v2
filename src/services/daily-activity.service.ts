@@ -99,6 +99,7 @@ export interface DailyActivityDataResult {
 interface CacheEntry {
   timestamp: number;
   data: NormalizedActivityRecord[];
+  sourceType: "google-sheet" | "excel" | "sample";
 }
 
 let memoryCache: CacheEntry | null = null;
@@ -129,7 +130,7 @@ async function discoverSheetNames(sheetId: string): Promise<string[]> {
 
   try {
     const url = `https://docs.google.com/spreadsheets/d/${sheetId}/htmlview`;
-    const res = await fetch(url, { next: { revalidate: 300 } });
+    const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) {
       console.warn(`[SheetDiscovery] htmlview fetch failed: ${res.status}`);
       return [];
@@ -476,7 +477,7 @@ export async function getRawDailyActivityRecords(): Promise<{
 }> {
   const now = Date.now();
   if (memoryCache && now - memoryCache.timestamp < CACHE_TTL_MS) {
-    return { records: memoryCache.data, sourceType: "sample" };
+    return { records: memoryCache.data, sourceType: memoryCache.sourceType };
   }
 
   const sheetUrl = process.env.DAILY_ACTIVITY_SHEET_URL;
@@ -489,7 +490,7 @@ export async function getRawDailyActivityRecords(): Promise<{
       const records: NormalizedActivityRecord[] = [];
       const fetchPromises = ACTIVITY_SHEETS.map(async (sheetName) => {
         const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(sheetName)}?key=${apiKey}`;
-        const res = await fetch(url, { next: { revalidate: 60 } });
+        const res = await fetch(url, { cache: "no-store" });
         if (!res.ok) return [];
         const json = await res.json();
         const rows: string[][] = json.values || [];
@@ -538,7 +539,7 @@ export async function getRawDailyActivityRecords(): Promise<{
       }
 
       if (records.length > 0) {
-        memoryCache = { timestamp: now, data: records };
+        memoryCache = { timestamp: now, data: records, sourceType: "google-sheet" };
         return { records, sourceType: "google-sheet" };
       }
     } catch (err) {
@@ -560,7 +561,7 @@ export async function getRawDailyActivityRecords(): Promise<{
       const records: NormalizedActivityRecord[] = [];
       const fetchPromises = sheetsToFetch.map(async (sheetName) => {
         const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
-        const res = await fetch(url, { next: { revalidate: 60 } });
+        const res = await fetch(url, { cache: "no-store" });
         if (!res.ok) return [];
         const csvText = await res.text();
         return parseCsvRows(csvText, sheetName);
@@ -572,7 +573,7 @@ export async function getRawDailyActivityRecords(): Promise<{
       }
 
       if (records.length > 0) {
-        memoryCache = { timestamp: now, data: records };
+        memoryCache = { timestamp: now, data: records, sourceType: "google-sheet" };
         return { records, sourceType: "google-sheet" };
       }
     } catch (err) {
@@ -583,11 +584,11 @@ export async function getRawDailyActivityRecords(): Promise<{
   // 3. Custom endpoint URL (e.g. Google Apps Script Web App returning JSON)
   if (sheetUrl) {
     try {
-      const res = await fetch(sheetUrl, { next: { revalidate: 60 } });
+      const res = await fetch(sheetUrl, { cache: "no-store" });
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json) && json.length > 0) {
-          memoryCache = { timestamp: now, data: json };
+          memoryCache = { timestamp: now, data: json, sourceType: "google-sheet" };
           return { records: json, sourceType: "google-sheet" };
         }
       }
@@ -598,7 +599,7 @@ export async function getRawDailyActivityRecords(): Promise<{
 
   // 4. Default Sample Data Fallback (September 2026)
   const sampleRecords = generateSampleData();
-  memoryCache = { timestamp: now, data: sampleRecords };
+  memoryCache = { timestamp: now, data: sampleRecords, sourceType: "sample" };
   return { records: sampleRecords, sourceType: "sample" };
 }
 
