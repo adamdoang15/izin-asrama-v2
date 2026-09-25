@@ -47,6 +47,11 @@ export default function DailyActivityTable({
 
   const currentWeek = weeks.find((w) => w.id === selectedWeek) || weeks[0];
 
+  const [sYear, sMonth] = (selectedMonth || "2026-09").split("-").map(Number);
+  const lastDayInMonth = sYear && sMonth ? new Date(sYear, sMonth, 0).getDate() : 30;
+  const minDate = `${selectedMonth}-01`;
+  const maxDate = `${selectedMonth}-${String(lastDayInMonth).padStart(2, "0")}`;
+
   // Client-side filtering for fast responsiveness
   const filteredRecords = useMemo(() => {
     return records.filter((rec) => {
@@ -140,8 +145,8 @@ export default function DailyActivityTable({
             type="button"
             onClick={() => {
               setFilterMode("harian");
-              if (!selectedDate) setSelectedDate("2026-09-03");
-              onFilterChange({ date: selectedDate || "2026-09-03", gelara: selectedGelara });
+              if (!selectedDate) setSelectedDate(minDate);
+              onFilterChange({ date: selectedDate || minDate, gelara: selectedGelara });
             }}
             className={`px-3 py-1 text-xs rounded-full font-medium transition-colors ${
               filterMode === "harian"
@@ -231,8 +236,8 @@ export default function DailyActivityTable({
               <input
                 type="date"
                 value={selectedDate}
-                min="2026-09-01"
-                max="2026-09-30"
+                min={minDate}
+                max={maxDate}
                 onChange={(e) => {
                   setSelectedDate(e.target.value);
                   onFilterChange({

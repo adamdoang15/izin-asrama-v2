@@ -468,6 +468,23 @@ function parseCsvLine(line: string): string[] {
   return result;
 }
 
+export function getActiveYearAndMonth(): { year: number; month: number; monthId: string } {
+  const envMonthId = process.env.DAILY_ACTIVITY_MONTH_ID;
+  if (envMonthId && /^\d{4}-\d{2}$/.test(envMonthId)) {
+    const [y, m] = envMonthId.split("-").map((s) => parseInt(s, 10));
+    return { year: y, month: m, monthId: envMonthId };
+  }
+
+  const envYear = process.env.DAILY_ACTIVITY_YEAR ? parseInt(process.env.DAILY_ACTIVITY_YEAR, 10) : null;
+  const envMonth = process.env.DAILY_ACTIVITY_MONTH ? parseInt(process.env.DAILY_ACTIVITY_MONTH, 10) : null;
+  if (envYear && envMonth) {
+    const monthId = `${envYear}-${String(envMonth).padStart(2, "0")}`;
+    return { year: envYear, month: envMonth, monthId };
+  }
+
+  return { year: 2026, month: 9, monthId: "2026-09" };
+}
+
 /**
  * Fetch all raw activity records from configured source or sample fallback
  */
@@ -483,6 +500,7 @@ export async function getRawDailyActivityRecords(): Promise<{
   const sheetUrl = process.env.DAILY_ACTIVITY_SHEET_URL;
   const sheetId = process.env.DAILY_ACTIVITY_SHEET_ID;
   const apiKey = process.env.GOOGLE_API_KEY;
+  const activePeriod = getActiveYearAndMonth();
 
   // 1. Google Sheets API via Key
   if (sheetId && apiKey) {
@@ -507,7 +525,7 @@ export async function getRawDailyActivityRecords(): Promise<{
           if (!isNaN(dayNum) && dayNum >= 1 && dayNum <= 31) {
             dateCols.push({
               colIdx: i,
-              dateIso: `2026-09-${String(dayNum).padStart(2, "0")}`,
+              dateIso: `${activePeriod.year}-${String(activePeriod.month).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`,
             });
           }
         }
@@ -564,7 +582,7 @@ export async function getRawDailyActivityRecords(): Promise<{
         const res = await fetch(url, { cache: "no-store" });
         if (!res.ok) return [];
         const csvText = await res.text();
-        return parseCsvRows(csvText, sheetName);
+        return parseCsvRows(csvText, sheetName, activePeriod.year, activePeriod.month);
       });
 
       const results = await Promise.all(fetchPromises);
@@ -613,24 +631,47 @@ export async function getDailyActivityData(params?: {
   gelara?: string;
 }): Promise<DailyActivityDataResult> {
   const { records, sourceType } = await getRawDailyActivityRecords();
+  const defaultPeriod = getActiveYearAndMonth();
 
-  const year = 2026;
-  const month = 9;
-  const monthId = params?.monthId || "2026-09";
+  // Determine active month
+  const monthId = params?.monthId || defaultPeriod.monthId;
+  const [year, month] = monthId.split("-").map((s) => parseInt(s, 10));
+
+  const monthName = NAMA_BULAN[month - 1] || "Bulan";
   const monthPeriod: MonthPeriod = {
     id: monthId,
-    label: "September 2026",
+    label: `${monthName} ${year}`,
     year,
     month,
   };
 
-  const availableMonths: MonthPeriod[] = [
-    { id: "2026-09", label: "September 2026", year: 2026, month: 9 },
-  ];
+  // Extract available months dynamically from records
+  const monthSet = new Set<string>();
+  records.forEach((r) => {
+    if (r.tanggal && /^\d{4}-\d{2}/.test(r.tanggal)) {
+      monthSet.add(r.tanggal.slice(0, 7));
+    }
+  });
+  if (monthSet.size === 0) {
+    monthSet.add(defaultPeriod.monthId);
+  }
+
+  const availableMonths: MonthPeriod[] = Array.from(monthSet)
+    .sort()
+    .map((mId) => {
+      const [y, m] = mId.split("-").map((s) => parseInt(s, 10));
+      const mName = NAMA_BULAN[m - 1] || "";
+      return {
+        id: mId,
+        label: `${mName} ${y}`,
+        year: y,
+        month: m,
+      };
+    });
 
   const weeks = generateWeeksForMonth(year, month);
-  // Default to Week 4 (or provided weekId)
-  const defaultWeekId = "w4";
+  // Default to Week 1 or current/matching week
+  const defaultWeekId = weeks[weeks.length - 1]?.id || "w1";
   const selectedWeekId = params?.weekId && weeks.some((w) => w.id === params.weekId)
     ? params.weekId
     : defaultWeekId;
