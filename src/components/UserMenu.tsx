@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { BellIcon, ChevronDownIcon, DashboardIcon, UsersIcon } from "./icons";
+import { BellIcon, CalendarActivityIcon, ChevronDownIcon, DashboardIcon, UsersIcon } from "./icons";
 import ThemeToggle from "./ThemeToggle";
 
 function DownloadIcon({ className }: { className?: string }) {
@@ -84,6 +84,7 @@ export default function UserMenu({
   subtitle,
   pengaturanHref,
   berandaHref,
+  dailyActivityHref,
   kelolaAkunHref,
   showEkspor,
   onSignOut,
@@ -92,6 +93,7 @@ export default function UserMenu({
   subtitle: string;
   pengaturanHref?: string;
   berandaHref?: string;
+  dailyActivityHref?: string;
   kelolaAkunHref?: string;
   showEkspor?: boolean;
   onSignOut: () => Promise<void>;
@@ -165,6 +167,18 @@ export default function UserMenu({
               >
                 <DashboardIcon className="h-4 w-4 shrink-0" />
                 Beranda
+              </Link>
+            )}
+
+            {/* Daily Activity */}
+            {dailyActivityHref && (
+              <Link
+                href={dailyActivityHref}
+                className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink-soft hover:bg-paper hover:text-ink border-b border-line"
+                onClick={closeAll}
+              >
+                <CalendarActivityIcon className="h-4 w-4 shrink-0" />
+                Daily Activity
               </Link>
             )}
 

@@ -11,6 +11,9 @@ const envSchema = z.object({
   ASRAMA_LAT: z.string().optional(),
   ASRAMA_LNG: z.string().optional(),
   ASRAMA_RADIUS_METERS: z.string().optional(),
+  DAILY_ACTIVITY_SHEET_ID: z.string().optional(),
+  DAILY_ACTIVITY_SHEET_URL: z.string().optional(),
+  GOOGLE_API_KEY: z.string().optional(),
 });
 
 const _env = envSchema.safeParse({
@@ -22,6 +25,9 @@ const _env = envSchema.safeParse({
   ASRAMA_LAT: process.env.ASRAMA_LAT || process.env.NEXT_PUBLIC_ASRAMA_LAT,
   ASRAMA_LNG: process.env.ASRAMA_LNG || process.env.NEXT_PUBLIC_ASRAMA_LNG,
   ASRAMA_RADIUS_METERS: process.env.ASRAMA_RADIUS_METERS || process.env.NEXT_PUBLIC_ASRAMA_RADIUS_METERS,
+  DAILY_ACTIVITY_SHEET_ID: process.env.DAILY_ACTIVITY_SHEET_ID,
+  DAILY_ACTIVITY_SHEET_URL: process.env.DAILY_ACTIVITY_SHEET_URL,
+  GOOGLE_API_KEY: process.env.GOOGLE_API_KEY,
 });
 
 if (!_env.success) {

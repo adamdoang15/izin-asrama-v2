@@ -40,6 +40,7 @@ export default async function TopNav() {
           name={name ?? "Pengguna"}
           subtitle={subtitle}
           berandaHref="/beranda"
+          dailyActivityHref="/daily-activity"
           kelolaAkunHref={isPengurus ? "/kelola-akun" : undefined}
           pengaturanHref={!isPengurus ? "/pengaturan" : undefined}
           showEkspor={isPengurus}

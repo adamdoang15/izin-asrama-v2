@@ -75,3 +75,14 @@ npm run build
 Jika database Supabase Anda sudah memakai versi sebelumnya, jalankan `supabase/migration.sql` di Supabase SQL Editor satu kali.
 
 Untuk database baru, gunakan `supabase/schema.sql`.
+
+## Fitur Daily Activity (Monitoring Ketidakhadiran & Progress)
+
+Fitur Daily Activity (`/daily-activity`) digunakan untuk monitoring pelaksanaan aktivitas harian gelara dari spreadsheet:
+- Menghubungkan 16 sheet aktivitas (BANGUN TIDUR, MANDI PAGI, SHOLAT SUBUH, PENGAMBILAN HP, TC, PIKET, MAKAN PAGI, BERANGKAT SEKOLAH, SHOLAT DZUHUR, SHOLAT ASHAR, SHOLAT MAGHRIB, SHOLAT ISYA, MAKAN MALAM, KBM, APEL MALAM, PENGUMPULAN HP).
+- Membaca status ketidakhadiran `A` (Alpha).
+- Menghitung persentase progress mingguan dan bulanan:
+  `Progress (%) = ((Total kegiatan tercatat - Jumlah A) / Total kegiatan tercatat) * 100`
+- Menyediakan filter tanggal, minggu, bulan, dan pencarian nama gelara.
+- Detail ketidakhadiran per gelara.
+
