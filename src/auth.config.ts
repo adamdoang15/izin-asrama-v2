@@ -20,10 +20,18 @@ export const authConfig: NextAuthConfig = {
       const isLoggedIn = !!auth?.user;
       const role = auth?.user?.role;
 
+      const isRootRoute = nextUrl.pathname === "/";
+      const isLoginRoute = nextUrl.pathname === "/login";
       const isKelolaAkunRoute = nextUrl.pathname.startsWith("/kelola-akun");
       const isBerandaRoute = nextUrl.pathname.startsWith("/beranda");
       const isPengaturanRoute = nextUrl.pathname.startsWith("/pengaturan");
       const isDailyActivityRoute = nextUrl.pathname.startsWith("/daily-activity");
+
+      // Jika pengguna sudah login, membuka halaman awal (/) atau login (/login)
+      // akan langsung dialihkan ke /beranda
+      if (isLoggedIn && (isRootRoute || isLoginRoute)) {
+        return Response.redirect(new URL("/beranda", nextUrl));
+      }
 
       if (isKelolaAkunRoute) {
         if (!isLoggedIn) return false;
