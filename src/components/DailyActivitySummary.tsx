@@ -4,6 +4,50 @@ import { useMemo, useState } from "react";
 import type { GelaraSummary } from "@/services/daily-activity.service";
 import { SearchIcon } from "./icons";
 
+type SortKey =
+  | "no"
+  | "namaGelara"
+  | "progressMingguan"
+  | "progressBulanan"
+  | "jumlahAMingguan"
+  | "jumlahABulanan";
+
+type SortDir = "asc" | "desc";
+
+const SORT_LABELS: Record<SortKey, string> = {
+  no: "No",
+  namaGelara: "Nama",
+  progressMingguan: "Progress Mingguan",
+  progressBulanan: "Progress Bulanan",
+  jumlahAMingguan: "A Minggu",
+  jumlahABulanan: "A Bulan",
+};
+
+function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
+  return (
+    <span
+      className={`inline-flex flex-col ml-1 gap-px align-middle transition-opacity ${active ? "opacity-100" : "opacity-30 group-hover/th:opacity-60"}`}
+    >
+      <svg
+        width="6"
+        height="4"
+        viewBox="0 0 6 4"
+        className={`block transition-colors ${active && dir === "asc" ? "text-teal" : "text-ink-soft"}`}
+      >
+        <path d="M3 0L6 4H0L3 0Z" fill="currentColor" />
+      </svg>
+      <svg
+        width="6"
+        height="4"
+        viewBox="0 0 6 4"
+        className={`block transition-colors ${active && dir === "desc" ? "text-teal" : "text-ink-soft"}`}
+      >
+        <path d="M3 4L0 0H6L3 4Z" fill="currentColor" />
+      </svg>
+    </span>
+  );
+}
+
 interface DailyActivitySummaryProps {
   summaries: GelaraSummary[];
   onSelectGelara: (summary: GelaraSummary) => void;
@@ -18,12 +62,49 @@ export default function DailyActivitySummary({
   selectedMonthLabel = "September 2026",
 }: DailyActivitySummaryProps) {
   const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("no");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      // Kolom pelanggaran: default descending agar yang paling banyak A muncul duluan
+      setSortDir(
+        key === "jumlahAMingguan" || key === "jumlahABulanan" ? "desc" : "asc"
+      );
+    }
+  }
 
   const filteredSummaries = useMemo(() => {
-    if (!search.trim()) return summaries;
-    const q = search.toLowerCase();
-    return summaries.filter((s) => s.namaGelara.toLowerCase().includes(q));
-  }, [summaries, search]);
+    let list = summaries;
+
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((s) => s.namaGelara.toLowerCase().includes(q));
+    }
+
+    list = [...list].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "namaGelara") {
+        cmp = a.namaGelara.localeCompare(b.namaGelara, "id");
+      } else if (sortKey === "progressMingguan") {
+        const av = a.progressMingguan ?? -1;
+        const bv = b.progressMingguan ?? -1;
+        cmp = av - bv;
+      } else if (sortKey === "progressBulanan") {
+        const av = a.progressBulanan ?? -1;
+        const bv = b.progressBulanan ?? -1;
+        cmp = av - bv;
+      } else {
+        cmp = (a[sortKey] as number) - (b[sortKey] as number);
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+
+    return list;
+  }, [summaries, search, sortKey, sortDir]);
 
   return (
     <div className="space-y-4">
@@ -48,28 +129,67 @@ export default function DailyActivitySummary({
         </div>
       </div>
 
+      {/* Mobile sort chips */}
+      <div className="md:hidden flex items-center gap-2 overflow-x-auto pb-1">
+        <span className="shrink-0 text-[10px] font-semibold uppercase text-ink-soft">Urutkan:</span>
+        {(Object.keys(SORT_LABELS) as SortKey[]).map((key) => {
+          const active = sortKey === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => handleSort(key)}
+              className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                active
+                  ? "border-teal bg-teal text-paper-raised"
+                  : "border-line bg-paper-raised text-ink-soft hover:border-teal hover:text-teal"
+              }`}
+            >
+              {SORT_LABELS[key]}
+              {active ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Desktop / Tablet Table */}
       <div className="hidden md:block overflow-hidden rounded-xl border border-line bg-paper-raised shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-line bg-paper/60 text-xs font-semibold text-ink-soft uppercase tracking-wider">
-                <th scope="col" className="px-4 py-3 w-12 text-center">No</th>
-                <th scope="col" className="px-4 py-3">Nama Gelara</th>
-                <th scope="col" className="px-4 py-3 text-center">
-                  Progress Mingguan
-                  <span className="block text-[10px] font-normal normal-case text-ink-soft">
-                    {selectedWeekLabel}
-                  </span>
-                </th>
-                <th scope="col" className="px-4 py-3 text-center">
-                  Progress Bulanan
-                  <span className="block text-[10px] font-normal normal-case text-ink-soft">
-                    {selectedMonthLabel}
-                  </span>
-                </th>
-                <th scope="col" className="px-4 py-3 text-center">A Minggu</th>
-                <th scope="col" className="px-4 py-3 text-center">A Bulan</th>
+                {(["no", "namaGelara", "progressMingguan", "progressBulanan", "jumlahAMingguan", "jumlahABulanan"] as SortKey[]).map((col) => {
+                  const active = sortKey === col;
+                  const isCenter = col !== "namaGelara";
+                  return (
+                    <th
+                      key={col}
+                      scope="col"
+                      onClick={() => handleSort(col)}
+                      aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                      className={`px-4 py-3 cursor-pointer select-none hover:text-ink transition-colors group/th ${
+                        col === "no" ? "w-12 text-center" : isCenter ? "text-center" : ""
+                      }`}
+                    >
+                      <span className="inline-flex items-center gap-0.5 justify-center">
+                        {col === "progressMingguan" ? (
+                          <>
+                            Progress Mingguan
+                            <span className="block text-[10px] font-normal normal-case text-ink-soft ml-0.5">({selectedWeekLabel})</span>
+                          </>
+                        ) : col === "progressBulanan" ? (
+                          <>
+                            Progress Bulanan
+                            <span className="block text-[10px] font-normal normal-case text-ink-soft ml-0.5">({selectedMonthLabel})</span>
+                          </>
+                        ) : (
+                          SORT_LABELS[col]
+                        )}
+                        <SortIcon active={active} dir={sortDir} />
+                      </span>
+                    </th>
+                  );
+                })}
                 <th scope="col" className="px-4 py-3 text-right">Aksi</th>
               </tr>
             </thead>
@@ -81,14 +201,14 @@ export default function DailyActivitySummary({
                   </td>
                 </tr>
               ) : (
-                filteredSummaries.map((row) => (
+                filteredSummaries.map((row, idx) => (
                   <tr
                     key={row.namaGelara}
                     className="hover:bg-paper/50 transition-colors group cursor-pointer"
                     onClick={() => onSelectGelara(row)}
                   >
                     <td className="px-4 py-3.5 text-center text-xs text-ink-soft font-medium">
-                      {row.no}
+                      {idx + 1}
                     </td>
                     <td className="px-4 py-3.5 font-medium text-ink">
                       <div className="flex items-center gap-2.5">
@@ -153,7 +273,7 @@ export default function DailyActivitySummary({
             Tidak ada data gelara yang sesuai.
           </div>
         ) : (
-          filteredSummaries.map((row) => (
+          filteredSummaries.map((row, idx) => (
             <div
               key={row.namaGelara}
               onClick={() => onSelectGelara(row)}
@@ -166,7 +286,7 @@ export default function DailyActivitySummary({
                   </span>
                   <div>
                     <h3 className="text-sm font-semibold leading-tight">{row.namaGelara}</h3>
-                    <p className="text-[11px] text-ink-soft mt-0.5">Gelara #{row.no}</p>
+                    <p className="text-[11px] text-ink-soft mt-0.5">#{idx + 1}</p>
                   </div>
                 </div>
                 <button
