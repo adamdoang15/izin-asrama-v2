@@ -43,17 +43,17 @@ function DailyActivityGelaraView({
 }) {
   const router = useRouter();
 
-  // Find gelara data matching the logged-in user
+  // Find gelara data matching the logged-in user.
+  // Tidak ada fallback ke index[0] — jika tidak cocok, tampilkan pesan "tidak ditemukan"
+  // supaya akun test/pengurus tidak menampilkan data milik gelara lain.
   const mySummary = useMemo(() => {
     const q = userName.trim().toLowerCase();
-    const found = initialData.gelaraSummaries.find(
+    return initialData.gelaraSummaries.find(
       (s) =>
         s.namaGelara.toLowerCase() === q ||
         s.namaGelara.toLowerCase().includes(q) ||
         q.includes(s.namaGelara.toLowerCase())
-    );
-    // Fallback to first gelara if demo account name doesn't match spreadsheet name
-    return found || initialData.gelaraSummaries[0] || null;
+    ) ?? null;
   }, [initialData.gelaraSummaries, userName]);
 
   const [selectedWeekId, setSelectedWeekId] = useState(initialData.selectedWeekId);
