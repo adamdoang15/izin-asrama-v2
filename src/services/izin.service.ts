@@ -534,6 +534,29 @@ export async function submitIzinRevision(
   return {};
 }
 
+export async function logGagalValidasiLokasi(
+  izinId: number,
+  userId: number,
+  alasan: string,
+  locationInfo: { latitude: number; longitude: number; distance: number; accuracy?: number }
+): Promise<void> {
+  const accText = locationInfo.accuracy !== undefined ? `, Akurasi: ±${Math.round(locationInfo.accuracy)}m` : "";
+  const distText = ` [Lokasi GPS: ${locationInfo.latitude.toFixed(6)}, ${locationInfo.longitude.toFixed(6)} (Jarak: ${locationInfo.distance}m${accText})]`;
+
+  const { error } = await supabase.from("izin_logs").insert({
+    izin_id: izinId,
+    actor_id: userId,
+    action: "GAGAL_VALIDASI_LOKASI",
+    old_status: "SEDANG_KELUAR",
+    new_status: "SEDANG_KELUAR",
+    catatan: `${alasan}${distText}`,
+  });
+
+  if (error) {
+    console.error("Gagal mencatat log kegagalan validasi lokasi:", error.message);
+  }
+}
+
 export async function markIzinReturned(
   id: number,
   userId: number,
@@ -541,7 +564,7 @@ export async function markIzinReturned(
   returnStatus: "TEPAT_WAKTU" | "TERLAMBAT",
   lateMinutes: number,
   santriName: string,
-  locationInfo?: { latitude: number; longitude: number; distance: number }
+  locationInfo?: { latitude: number; longitude: number; distance: number; accuracy?: number }
 ): Promise<{ error?: string }> {
   const { error } = await supabase
     .from("izin")
@@ -559,8 +582,9 @@ export async function markIzinReturned(
   if (error) return { error: `Gagal mencatat kepulangan: ${error.message}` };
 
   const statusCatatan = returnStatus === "TERLAMBAT" ? `Terlambat ${lateMinutes} menit.` : "Kembali tepat waktu.";
+  const accText = locationInfo?.accuracy !== undefined ? `, Akurasi: ±${Math.round(locationInfo.accuracy)}m` : "";
   const locationCatatan = locationInfo
-    ? ` [Lokasi GPS: ${locationInfo.latitude.toFixed(6)}, ${locationInfo.longitude.toFixed(6)} (Jarak: ${locationInfo.distance}m)]`
+    ? ` [Lokasi GPS: ${locationInfo.latitude.toFixed(6)}, ${locationInfo.longitude.toFixed(6)} (Jarak: ${locationInfo.distance}m${accText})]`
     : "";
 
   await supabase.from("izin_logs").insert({
@@ -583,6 +607,53 @@ export async function markIzinReturned(
     body: `${santriName} telah kembali ke asrama (${statusText}).`,
     url: "/beranda",
   }).catch((err) => console.error("Gagal mengirim notifikasi kepulangan:", err));
+
+  return {};
+}
+
+export async function markIzinReturnedByPengurus(
+  id: number,
+  adminId: number,
+  adminName: string,
+  alasan: string
+): Promise<{ error?: string }> {
+  const izin = await getIzinFullById(id);
+  if (!izin) return { error: "Pengajuan tidak ditemukan." };
+  if (izin.status !== "SEDANG_KELUAR") {
+    return { error: "Izin ini belum berstatus sedang keluar atau sudah diselesaikan." };
+  }
+
+  const now = new Date();
+  const batasKembali = new Date(izin.perkiraan_kembali);
+  const lateMs = Math.max(0, now.getTime() - batasKembali.getTime());
+  const lateMinutes = Math.ceil(lateMs / 60000);
+  const returnStatus = lateMinutes > 0 ? "TERLAMBAT" : "TEPAT_WAKTU";
+  const returnedAt = now.toISOString();
+
+  const { error } = await supabase
+    .from("izin")
+    .update({
+      status: "SUDAH_KEMBALI",
+      returned_at: returnedAt,
+      return_status: returnStatus,
+      late_minutes: lateMinutes,
+      updated_at: returnedAt,
+    })
+    .eq("id", id)
+    .eq("status", "SEDANG_KELUAR");
+
+  if (error) return { error: `Gagal menandai kepulangan: ${error.message}` };
+
+  const statusCatatan = returnStatus === "TERLAMBAT" ? `Terlambat ${lateMinutes} menit.` : "Kembali tepat waktu.";
+
+  await supabase.from("izin_logs").insert({
+    izin_id: id,
+    actor_id: adminId,
+    action: "KEMBALI_MANUAL_PENGURUS",
+    old_status: "SEDANG_KELUAR",
+    new_status: "SUDAH_KEMBALI",
+    catatan: `Ditandai kembali manual oleh Pengurus (${adminName}): "${alasan}". ${statusCatatan}`,
+  });
 
   return {};
 }

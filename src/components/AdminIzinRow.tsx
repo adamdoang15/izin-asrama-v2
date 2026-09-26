@@ -1,7 +1,14 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { setujuiIzinAction, tolakIzinAction, mintaRevisiIzinAction, hapusIzinAction, type ActionState } from "@/app/admin/actions";
+import {
+  setujuiIzinAction,
+  tolakIzinAction,
+  mintaRevisiIzinAction,
+  hapusIzinAction,
+  tandaiKembaliManualAction,
+  type ActionState,
+} from "@/app/admin/actions";
 import EditIzinForm from "@/components/EditIzinForm";
 import StatusPill from "@/components/StatusPill";
 import { formatTanggalWaktu } from "@/lib/format";
@@ -14,10 +21,15 @@ export default function AdminIzinRow({ izin }: { izin: IzinWithSantri }) {
   const [showMintaRevisi, setShowMintaRevisi] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showHapus, setShowHapus] = useState(false);
+  const [showKembaliManual, setShowKembaliManual] = useState(false);
   const [approveState, approveAction, approvePending] = useActionState(setujuiIzinAction, initialState);
   const [rejectState, rejectAction, rejectPending] = useActionState(tolakIzinAction, initialState);
   const [revisiState, revisiAction, revisiPending] = useActionState(mintaRevisiIzinAction, initialState);
   const [hapusState, hapusAction, hapusPending] = useActionState(hapusIzinAction, initialState);
+  const [kembaliManualState, kembaliManualAction, kembaliManualPending] = useActionState(
+    tandaiKembaliManualAction,
+    initialState
+  );
 
   return (
     <li className="rounded-md border border-line bg-paper-raised px-4 py-3.5">
@@ -59,6 +71,7 @@ export default function AdminIzinRow({ izin }: { izin: IzinWithSantri }) {
                 onClick={() => {
                   setShowMintaRevisi(true);
                   setShowTolak(false);
+                  setShowKembaliManual(false);
                 }}
                 className="text-sm text-clay"
               >
@@ -69,6 +82,7 @@ export default function AdminIzinRow({ izin }: { izin: IzinWithSantri }) {
                 onClick={() => {
                   setShowTolak(true);
                   setShowMintaRevisi(false);
+                  setShowKembaliManual(false);
                 }}
                 className="text-sm text-clay"
               >
@@ -104,6 +118,65 @@ export default function AdminIzinRow({ izin }: { izin: IzinWithSantri }) {
         </div>
       )}
 
+      {izin.status === "SEDANG_KELUAR" && (
+        <div className="mt-3.5 pt-3.5 border-t border-line">
+          {!showKembaliManual && (
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowKembaliManual(true);
+                  setShowEdit(false);
+                  setShowHapus(false);
+                }}
+                className="rounded-md bg-sage px-3.5 py-1.5 text-sm font-medium text-paper-raised hover:opacity-90 transition-opacity"
+              >
+                Tandai Sudah Kembali (Manual)
+              </button>
+            </div>
+          )}
+
+          {showKembaliManual && (
+            <form action={kembaliManualAction} className="space-y-2.5">
+              <input type="hidden" name="id" value={izin.id} />
+              <div>
+                <p className="text-sm font-medium text-ink">
+                  Tandai kepulangan santri secara manual (tanpa validasi GPS)
+                </p>
+                <p className="text-xs text-ink-soft mt-0.5">
+                  Gunakan jika santri sudah berada di asrama namun terkendala GPS/sinyal. Wajib sertakan alasan.
+                </p>
+              </div>
+              <textarea
+                name="alasan"
+                rows={2}
+                required
+                placeholder="Contoh: Santri sudah tiba di asrama/pos, GPS di HP kendala timeout/sinyal"
+                className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm resize-none"
+              />
+              {kembaliManualState.error && (
+                <p className="text-sm text-clay">{kembaliManualState.error}</p>
+              )}
+              <div className="flex gap-3">
+                <button
+                  disabled={kembaliManualPending}
+                  className="rounded-md bg-sage px-3.5 py-1.5 text-sm font-medium text-paper-raised disabled:opacity-60"
+                >
+                  {kembaliManualPending ? "Menyimpan..." : "Konfirmasi Sudah Kembali"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowKembaliManual(false)}
+                  className="text-sm text-ink-soft"
+                >
+                  Batal
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
+
       {izin.status === "PERLU_REVISI" && (
         <div className="mt-3.5 pt-3.5 border-t border-line text-sm text-ink-soft">
           Menunggu gelara merevisi pengajuan ini.
@@ -117,14 +190,14 @@ export default function AdminIzinRow({ izin }: { izin: IzinWithSantri }) {
             <div className="flex items-center gap-4">
               <button
                 type="button"
-                onClick={() => { setShowEdit(true); setShowHapus(false); }}
+                onClick={() => { setShowEdit(true); setShowHapus(false); setShowKembaliManual(false); }}
                 className="text-sm text-teal"
               >
                 Edit data
               </button>
               <button
                 type="button"
-                onClick={() => { setShowHapus(true); setShowEdit(false); }}
+                onClick={() => { setShowHapus(true); setShowEdit(false); setShowKembaliManual(false); }}
                 className="text-sm text-clay"
               >
                 Hapus pengajuan

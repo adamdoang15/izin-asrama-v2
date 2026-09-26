@@ -11,6 +11,7 @@ import {
   createIzin,
   getCurrentIzinStatus,
   markIzinReturned,
+  logGagalValidasiLokasi,
   submitIzinRevision,
 } from "@/services/izin.service";
 import { syncBlacklistStatus } from "@/services/user.service";
@@ -152,6 +153,7 @@ export async function tandaiKembaliAction(
 
   const latRaw = formData.get("latitude");
   const lngRaw = formData.get("longitude");
+  const accRaw = formData.get("accuracy");
 
   if (!latRaw || !lngRaw) {
     return { error: "Lokasi GPS diperlukan untuk mencatat kepulangan. Pastikan izin lokasi aktif." };
@@ -159,18 +161,10 @@ export async function tandaiKembaliAction(
 
   const userLat = Number(latRaw);
   const userLng = Number(lngRaw);
+  const userAcc = accRaw ? Number(accRaw) : undefined;
 
-  if (Number.isNaN(userLat) || Number.isNaN(userLng)) {
+  if (Number.isNaN(userLat) || Number.isNaN(userLng) || (userAcc !== undefined && Number.isNaN(userAcc))) {
     return { error: "Format koordinat lokasi tidak valid." };
-  }
-
-  const asrama = getAsramaConfig();
-  const distance = getDistanceInMeters(userLat, userLng, asrama.lat, asrama.lng);
-
-  if (distance > asrama.radiusMeters) {
-    return {
-      error: `Gagal mencatat kepulangan. Anda berada di luar radius asrama (jarak: ${distance} meter, batas radius: ${asrama.radiusMeters} meter).`,
-    };
   }
 
   await syncScheduledIzinStatuses();
@@ -178,6 +172,33 @@ export async function tandaiKembaliAction(
   const izin = await getCurrentIzinStatus(id.data);
   if (!izin || izin.user_id !== Number(session.user.id)) return { error: "Izin tidak ditemukan." };
   if (izin.status !== "SEDANG_KELUAR") return { error: "Izin ini belum berstatus sedang keluar." };
+
+  const asrama = getAsramaConfig();
+  const distance = getDistanceInMeters(userLat, userLng, asrama.lat, asrama.lng);
+
+  // Validasi akurasi sinyal GPS
+  if (userAcc !== undefined && userAcc > asrama.maxAccuracyMeters) {
+    const errorMsg = `Sinyal GPS kurang akurat (akurasi ±${Math.round(userAcc)} meter, batas maksimal ${asrama.maxAccuracyMeters} meter). Coba dekati jendela atau area terbuka di asrama, lalu coba lagi.`;
+    await logGagalValidasiLokasi(id.data, Number(session.user.id), "Sinyal GPS kurang akurat", {
+      latitude: userLat,
+      longitude: userLng,
+      distance,
+      accuracy: userAcc,
+    });
+    return { error: errorMsg };
+  }
+
+  // Validasi batas radius asrama
+  if (distance > asrama.radiusMeters) {
+    const errorMsg = `Gagal mencatat kepulangan. Anda berada di luar radius asrama (jarak terdeteksi: ${distance} meter, batas radius: ${asrama.radiusMeters} meter). Pastikan Anda sudah berada di area asrama.`;
+    await logGagalValidasiLokasi(id.data, Number(session.user.id), "Di luar radius asrama", {
+      latitude: userLat,
+      longitude: userLng,
+      distance,
+      accuracy: userAcc,
+    });
+    return { error: errorMsg };
+  }
 
   const now = new Date();
   const batasKembali = new Date(izin.perkiraan_kembali);
@@ -193,7 +214,7 @@ export async function tandaiKembaliAction(
     returnStatus,
     lateMinutes,
     session.user.name ?? "Gelara",
-    { latitude: userLat, longitude: userLng, distance }
+    { latitude: userLat, longitude: userLng, distance, accuracy: userAcc }
   );
   if (result.error) return { error: result.error };
 

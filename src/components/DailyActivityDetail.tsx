@@ -139,11 +139,13 @@ export default function DailyActivityDetail({
 
           {/* Tab Selection */}
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-semibold">
-                Daftar Kegiatan Tidak Diikuti ({activeTab === "mingguan" ? "Minggu Ini" : "Bulan Ini"})
-              </h4>
-              <span className="text-xs font-medium text-clay bg-clay-soft px-2.5 py-0.5 rounded-full">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="min-w-0">
+                <h4 className="text-sm font-semibold">
+                  Daftar Kegiatan Tidak Diikuti ({activeTab === "mingguan" ? "Minggu Ini" : "Bulan Ini"})
+                </h4>
+              </div>
+              <span className="shrink-0 whitespace-nowrap inline-flex items-center text-xs font-medium text-clay bg-clay-soft px-2.5 py-0.5 rounded-full">
                 {currentList.length} Kegiatan A
               </span>
             </div>

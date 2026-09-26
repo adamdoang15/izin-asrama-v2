@@ -256,8 +256,8 @@ function DailyActivityGelaraView({
 
       {/* Daftar Kegiatan yang Tidak Diikuti (A) Milik Gelara Ini */}
       <section className="rounded-xl border border-line bg-paper-raised p-6 shadow-xs space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
             <h2 className="text-base font-semibold">
               Kegiatan Tidak Diikuti ({periodTab === "mingguan" ? currentWeek.shortLabel : "Bulan Ini"})
             </h2>
@@ -266,7 +266,7 @@ function DailyActivityGelaraView({
             </p>
           </div>
 
-          <span className="inline-flex items-center rounded-full bg-clay-soft px-3 py-1 text-xs font-semibold text-clay">
+          <span className="shrink-0 whitespace-nowrap inline-flex items-center rounded-full bg-clay-soft px-3 py-1 text-xs font-semibold text-clay">
             {displayedAbsences.length} Kegiatan A
           </span>
         </div>
