@@ -46,13 +46,15 @@ function DailyActivityGelaraView({
   // Find gelara data matching the logged-in user.
   // Tidak ada fallback ke index[0] — jika tidak cocok, tampilkan pesan "tidak ditemukan"
   // supaya akun test/pengurus tidak menampilkan data milik gelara lain.
+  const normalizeName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, "");
+
   const mySummary = useMemo(() => {
-    const q = userName.trim().toLowerCase();
+    const q = normalizeName(userName);
     return initialData.gelaraSummaries.find(
-      (s) =>
-        s.namaGelara.toLowerCase() === q ||
-        s.namaGelara.toLowerCase().includes(q) ||
-        q.includes(s.namaGelara.toLowerCase())
+      (s) => {
+        const sName = normalizeName(s.namaGelara);
+        return sName === q || sName.includes(q) || q.includes(sName);
+      }
     ) ?? null;
   }, [initialData.gelaraSummaries, userName]);
 
@@ -65,9 +67,9 @@ function DailyActivityGelaraView({
   // Filter absent activities that strictly belong to this gelara only
   const myAbsentActivities = useMemo(() => {
     if (!mySummary) return [];
-    const myNameLower = mySummary.namaGelara.toLowerCase();
+    const myNameKey = normalizeName(mySummary.namaGelara);
     return initialData.absentActivities.filter(
-      (a) => a.namaGelara.toLowerCase() === myNameLower
+      (a) => normalizeName(a.namaGelara) === myNameKey
     );
   }, [initialData.absentActivities, mySummary]);
 
