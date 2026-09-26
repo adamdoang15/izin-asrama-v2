@@ -11,6 +11,7 @@ import {
   requestIzinRevision,
   editIzinByPengurus,
   deleteIzinByPengurus,
+  markIzinReturnedByPengurus,
 } from "@/services/izin.service";
 
 async function requireAdmin() {
@@ -26,6 +27,11 @@ const rejectSchema = z.object({ id: idSchema, catatan: z.string().trim().min(3, 
 const mintaRevisiSchema = z.object({
   id: idSchema,
   catatan: z.string().trim().min(3, "Catatan untuk gelara wajib diisi."),
+});
+
+const tandaiKembaliManualSchema = z.object({
+  id: idSchema,
+  alasan: z.string().trim().min(3, "Alasan penandaan kembali manual wajib diisi, minimal 3 karakter."),
 });
 
 const jenisIzinSchema = z.enum(["HARIAN", "MENGINAP", "REKREASI", "KELUARGA", "DARURAT"]);
@@ -91,6 +97,26 @@ export async function mintaRevisiIzinAction(_prev: ActionState, formData: FormDa
   if (current.status !== "MENUNGGU") return { error: "Pengajuan ini sudah diproses." };
 
   const result = await requestIzinRevision(parsed.data.id, Number(session.user.id), parsed.data.catatan);
+  if (result.error) return { error: result.error };
+
+  revalidatePath("/beranda");
+  return { success: true };
+}
+
+export async function tandaiKembaliManualAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await requireAdmin();
+  const parsed = tandaiKembaliManualSchema.safeParse({
+    id: formData.get("id"),
+    alasan: formData.get("alasan"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+
+  const result = await markIzinReturnedByPengurus(
+    parsed.data.id,
+    Number(session.user.id),
+    session.user.name ?? "Pengurus",
+    parsed.data.alasan
+  );
   if (result.error) return { error: result.error };
 
   revalidatePath("/beranda");

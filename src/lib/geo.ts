@@ -39,10 +39,14 @@ export function getAsramaConfig() {
   const radius = parseFloat(
     process.env.NEXT_PUBLIC_ASRAMA_RADIUS_METERS || process.env.ASRAMA_RADIUS_METERS || "100"
   );
+  const maxAccuracy = parseFloat(
+    process.env.NEXT_PUBLIC_ASRAMA_MAX_ACCURACY_METERS || process.env.ASRAMA_MAX_ACCURACY_METERS || "200"
+  );
 
   return {
     lat: isNaN(lat) ? -6.200000 : lat,
     lng: isNaN(lng) ? 106.816666 : lng,
     radiusMeters: isNaN(radius) ? 100 : radius,
+    maxAccuracyMeters: isNaN(maxAccuracy) ? 200 : maxAccuracy,
   };
 }
