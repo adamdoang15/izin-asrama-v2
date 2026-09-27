@@ -13,5 +13,10 @@ const STATUS_CONFIG: Record<StatusIzin, { label: string; dot: string; text: stri
 
 export default function StatusPill({ status }: { status: StatusIzin }) {
   const cfg = STATUS_CONFIG[status];
-  return <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${cfg.text}`}><span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />{cfg.label}</span>;
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold uppercase tracking-wider rounded-md border border-current ${cfg.text} bg-opacity-10`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+      {cfg.label}
+    </span>
+  );
 }
