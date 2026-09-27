@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition, useActionState } from "react";
 import { tandaiKembaliAction, type KembaliState } from "@/app/santri/actions";
+import { MapPinLine, SpinnerGap, WarningCircle, CheckCircle } from "@phosphor-icons/react";
 
 const initialState: KembaliState = {};
 
@@ -63,7 +64,6 @@ export default function ReturnIzinButton({ id }: { id: number }) {
       });
     };
 
-    // Timeout 25 detik untuk mencari GPS terbaik
     timerIdRef.current = setTimeout(() => {
       if (bestPositionRef.current) {
         finishAndSubmit(bestPositionRef.current);
@@ -88,7 +88,6 @@ export default function ReturnIzinButton({ id }: { id: number }) {
 
           setGeoStatus(`Mengunci sinyal GPS (akurasi: ±${Math.round(currentAcc)}m)...`);
 
-          // Jika akurasi sudah sangat baik (<= 30 meter), langsung proses
           if (currentAcc <= 30) {
             finishAndSubmit(position);
           }
@@ -120,50 +119,67 @@ export default function ReturnIzinButton({ id }: { id: number }) {
   const loading = isActionPending || geoLoading || isPending;
 
   return (
-    <div className="mt-3 pt-3 border-t border-line">
+    <div className="mt-4 pt-4 border-t border-line flex flex-col gap-2">
       <button
         type="button"
         onClick={handleReturnClick}
         disabled={loading}
-        className="w-full sm:w-auto rounded-md bg-sage px-4 py-2 text-sm font-medium text-paper-raised hover:opacity-90 disabled:opacity-60 transition-opacity inline-flex items-center justify-center gap-2"
+        className="w-full sm:w-auto rounded-lg bg-teal px-5 py-2.5 text-sm font-medium text-paper-raised 
+                   hover:bg-teal-soft hover:text-teal focus:outline-none focus:ring-2 focus:ring-teal focus:ring-offset-2 
+                   focus:ring-offset-paper disabled:opacity-60 disabled:pointer-events-none 
+                   active:scale-95 transition-all duration-200 inline-flex items-center justify-center gap-2 shadow-sm"
       >
         {geoLoading ? (
           <>
-            <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]" />
-            <span>Mencari sinyal GPS...</span>
+            <SpinnerGap weight="bold" className="animate-spin text-lg" />
+            <span>Mencari GPS...</span>
           </>
         ) : loading ? (
           <>
-            <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em]" />
-            <span>Mencatat kepulangan...</span>
+            <SpinnerGap weight="bold" className="animate-spin text-lg" />
+            <span>Mencatat...</span>
           </>
         ) : (
-          "Saya sudah kembali"
+          <>
+            <MapPinLine weight="bold" className="text-lg" />
+            <span>Saya sudah kembali</span>
+          </>
         )}
       </button>
 
-      {geoLoading && geoStatus && (
-        <p className="text-xs text-ink-soft mt-2 flex items-center gap-1.5" role="status">
-          <span className="inline-block h-2 w-2 rounded-full bg-teal animate-pulse" />
-          {geoStatus}
-        </p>
-      )}
+      {/* Status & Feedback Area */}
+      <div className="flex flex-col gap-2 empty:hidden">
+        {geoLoading && geoStatus && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-amber-soft text-amber rounded-md text-xs font-medium" role="status">
+            <span className="relative flex h-2.5 w-2.5 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber"></span>
+            </span>
+            <span>{geoStatus}</span>
+          </div>
+        )}
 
-      {geoError && (
-        <p className="text-sm text-clay mt-2" role="alert">
-          {geoError}
-        </p>
-      )}
-      {!geoError && state.error && (
-        <p className="text-sm text-clay mt-2" role="alert">
-          {state.error}
-        </p>
-      )}
-      {state.success && (
-        <p className="text-sm text-sage mt-2" role="status">
-          Kepulangan berhasil dicatat.
-        </p>
-      )}
+        {geoError && (
+          <div className="flex items-start gap-2 px-3 py-2.5 bg-clay-soft text-clay rounded-md text-sm font-medium" role="alert">
+            <WarningCircle weight="fill" className="text-lg shrink-0 mt-0.5" />
+            <span>{geoError}</span>
+          </div>
+        )}
+
+        {!geoError && state.error && (
+          <div className="flex items-start gap-2 px-3 py-2.5 bg-clay-soft text-clay rounded-md text-sm font-medium" role="alert">
+            <WarningCircle weight="fill" className="text-lg shrink-0 mt-0.5" />
+            <span>{state.error}</span>
+          </div>
+        )}
+
+        {state.success && (
+          <div className="flex items-start gap-2 px-3 py-2.5 bg-sage-soft text-sage rounded-md text-sm font-medium" role="status">
+            <CheckCircle weight="fill" className="text-lg shrink-0 mt-0.5" />
+            <span>Kepulangan berhasil dicatat.</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
