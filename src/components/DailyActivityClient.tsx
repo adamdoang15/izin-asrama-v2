@@ -9,7 +9,6 @@ import type {
   WeekPeriod,
 } from "@/services/daily-activity.service";
 import DailyActivitySummary from "./DailyActivitySummary";
-import DailyActivityTable from "./DailyActivityTable";
 import DailyActivityDetail from "./DailyActivityDetail";
 
 interface DailyActivityClientProps {
@@ -341,7 +340,6 @@ function DailyActivityPengurusView({
   const router = useRouter();
   const [selectedGelaraForDetail, setSelectedGelaraForDetail] =
     useState<GelaraSummary | null>(null);
-  const [activeView, setActiveView] = useState<"summary" | "table">("summary");
 
   const currentWeek =
     initialData.weeks.find((w) => w.id === initialData.selectedWeekId) ||
@@ -418,28 +416,26 @@ function DailyActivityPengurusView({
           </p>
         </div>
 
-        {/* View mode switcher */}
-        <div className="flex items-center gap-1 rounded-lg border border-line bg-paper-raised p-1 self-start md:self-auto">
-          <button
-            type="button"
-            onClick={() => setActiveView("summary")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${activeView === "summary"
-              ? "bg-teal text-paper-raised"
-              : "text-ink-soft hover:text-ink"
-              }`}
+        {/* Filters */}
+        <div className="flex items-center gap-2 self-start md:self-auto">
+          <select
+            value={initialData.selectedMonthId}
+            onChange={(e) => handleFilterChange({ monthId: e.target.value, weekId: initialData.selectedWeekId })}
+            className="rounded-lg border border-line bg-paper px-3 py-2 text-xs font-medium outline-none focus:border-teal focus:ring-1 focus:ring-teal"
           >
-            Ringkasan Gelara
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveView("table")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${activeView === "table"
-              ? "bg-teal text-paper-raised"
-              : "text-ink-soft hover:text-ink"
-              }`}
+            {initialData.availableMonths.map((m) => (
+              <option key={m.id} value={m.id}>{m.label}</option>
+            ))}
+          </select>
+          <select
+            value={initialData.selectedWeekId}
+            onChange={(e) => handleFilterChange({ weekId: e.target.value, monthId: initialData.selectedMonthId })}
+            className="rounded-lg border border-line bg-paper px-3 py-2 text-xs font-medium outline-none focus:border-teal focus:ring-1 focus:ring-teal"
           >
-            Ketidakhadiran (A/S/I)
-          </button>
+            {initialData.weeks.map((w) => (
+              <option key={w.id} value={w.id}>{w.label}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -494,31 +490,14 @@ function DailyActivityPengurusView({
       </section>
 
       {/* Summary Table / Cards */}
-      {activeView === "summary" && (
-        <section className="space-y-4 pt-2">
-          <DailyActivitySummary
-            summaries={initialData.gelaraSummaries}
-            onSelectGelara={(summary) => setSelectedGelaraForDetail(summary)}
-            selectedWeekLabel={currentWeek.label}
-            selectedMonthLabel={initialData.month.label}
-          />
-        </section>
-      )}
-
-      {/* Absent Activities Table / List */}
-      {activeView === "table" && (
-        <section className="space-y-4 pt-4 border-t border-line">
-          <DailyActivityTable
-            records={initialData.absentActivities}
-            allGelaraNames={initialData.allGelaraNames}
-            weeks={initialData.weeks}
-            availableMonths={initialData.availableMonths}
-            selectedWeekId={initialData.selectedWeekId}
-            selectedMonthId={initialData.selectedMonthId}
-            onFilterChange={handleFilterChange}
-          />
-        </section>
-      )}
+      <section className="space-y-4 pt-2">
+        <DailyActivitySummary
+          summaries={initialData.gelaraSummaries}
+          onSelectGelara={(summary) => setSelectedGelaraForDetail(summary)}
+          selectedWeekLabel={currentWeek.label}
+          selectedMonthLabel={initialData.month.label}
+        />
+      </section>
 
       {/* Gelara Detail Modal */}
       {selectedGelaraForDetail && (
