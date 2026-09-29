@@ -52,127 +52,156 @@ const hapusIzinSchema = z.object({
 });
 
 export async function setujuiIzinAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const session = await requireAdmin();
-  const id = idSchema.safeParse(formData.get("id"));
-  if (!id.success) return { error: "Pengajuan tidak ditemukan." };
+  try {
+    const session = await requireAdmin();
+    const id = idSchema.safeParse(formData.get("id"));
+    if (!id.success) return { error: "Pengajuan tidak ditemukan." };
 
-  const current = await getCurrentIzinStatus(id.data);
-  if (!current) return { error: "Pengajuan tidak ditemukan." };
-  if (current.status !== "MENUNGGU") return { error: "Pengajuan ini sudah diproses." };
+    const current = await getCurrentIzinStatus(id.data);
+    if (!current) return { error: "Pengajuan tidak ditemukan." };
+    if (current.status !== "MENUNGGU") return { error: "Pengajuan ini sudah diproses." };
 
-  const now = new Date();
-  const scheduledExit = new Date(current.tanggal_keluar);
-  const nextStatus = scheduledExit <= now ? "SEDANG_KELUAR" : "DISETUJUI";
+    const now = new Date();
+    const scheduledExit = new Date(current.tanggal_keluar);
+    const nextStatus = scheduledExit <= now ? "SEDANG_KELUAR" : "DISETUJUI";
 
-  const result = await approveIzin(id.data, Number(session.user.id), nextStatus);
-  if (result.error) return { error: result.error };
+    const result = await approveIzin(id.data, Number(session.user.id), nextStatus);
+    if (result.error) return { error: result.error };
 
-  revalidatePath("/beranda");
-  return { success: true };
+    revalidatePath("/beranda");
+    return { success: true };
+  } catch (err) {
+    console.error("[setujuiIzinAction]", err);
+    return { error: err instanceof Error ? err.message : "Terjadi kesalahan server." };
+  }
 }
 
 export async function tolakIzinAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const session = await requireAdmin();
-  const parsed = rejectSchema.safeParse({ id: formData.get("id"), catatan: formData.get("catatan") });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+  try {
+    await requireAdmin();
+    const parsed = rejectSchema.safeParse({ id: formData.get("id"), catatan: formData.get("catatan") });
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
 
-  const current = await getCurrentIzinStatus(parsed.data.id);
-  if (!current) return { error: "Pengajuan tidak ditemukan." };
-  if (current.status !== "MENUNGGU") return { error: "Pengajuan ini sudah diproses." };
+    const current = await getCurrentIzinStatus(parsed.data.id);
+    if (!current) return { error: "Pengajuan tidak ditemukan." };
+    if (current.status !== "MENUNGGU") return { error: "Pengajuan ini sudah diproses." };
 
-  const result = await rejectIzin(parsed.data.id, Number(session.user.id), parsed.data.catatan);
-  if (result.error) return { error: result.error };
+    const result = await rejectIzin(parsed.data.id, Number((await auth())!.user!.id), parsed.data.catatan);
+    if (result.error) return { error: result.error };
 
-  revalidatePath("/beranda");
-  return { success: true };
+    revalidatePath("/beranda");
+    return { success: true };
+  } catch (err) {
+    console.error("[tolakIzinAction]", err);
+    return { error: err instanceof Error ? err.message : "Terjadi kesalahan server." };
+  }
 }
 
 export async function mintaRevisiIzinAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const session = await requireAdmin();
-  const parsed = mintaRevisiSchema.safeParse({ id: formData.get("id"), catatan: formData.get("catatan") });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+  try {
+    await requireAdmin();
+    const parsed = mintaRevisiSchema.safeParse({ id: formData.get("id"), catatan: formData.get("catatan") });
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
 
-  const current = await getCurrentIzinStatus(parsed.data.id);
-  if (!current) return { error: "Pengajuan tidak ditemukan." };
-  if (current.status !== "MENUNGGU") return { error: "Pengajuan ini sudah diproses." };
+    const current = await getCurrentIzinStatus(parsed.data.id);
+    if (!current) return { error: "Pengajuan tidak ditemukan." };
+    if (current.status !== "MENUNGGU") return { error: "Pengajuan ini sudah diproses." };
 
-  const result = await requestIzinRevision(parsed.data.id, Number(session.user.id), parsed.data.catatan);
-  if (result.error) return { error: result.error };
+    const result = await requestIzinRevision(parsed.data.id, Number((await auth())!.user!.id), parsed.data.catatan);
+    if (result.error) return { error: result.error };
 
-  revalidatePath("/beranda");
-  return { success: true };
+    revalidatePath("/beranda");
+    return { success: true };
+  } catch (err) {
+    console.error("[mintaRevisiIzinAction]", err);
+    return { error: err instanceof Error ? err.message : "Terjadi kesalahan server." };
+  }
 }
 
 export async function tandaiKembaliManualAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const session = await requireAdmin();
-  const parsed = tandaiKembaliManualSchema.safeParse({
-    id: formData.get("id"),
-    alasan: formData.get("alasan"),
-  });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+  try {
+    const session = await requireAdmin();
+    const parsed = tandaiKembaliManualSchema.safeParse({
+      id: formData.get("id"),
+      alasan: formData.get("alasan"),
+    });
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
 
-  const result = await markIzinReturnedByPengurus(
-    parsed.data.id,
-    Number(session.user.id),
-    session.user.name ?? "Pengurus",
-    parsed.data.alasan
-  );
-  if (result.error) return { error: result.error };
+    const result = await markIzinReturnedByPengurus(
+      parsed.data.id,
+      Number(session.user.id),
+      session.user.name ?? "Pengurus",
+      parsed.data.alasan
+    );
+    if (result.error) return { error: result.error };
 
-  revalidatePath("/beranda");
-  return { success: true };
+    revalidatePath("/beranda");
+    return { success: true };
+  } catch (err) {
+    console.error("[tandaiKembaliManualAction]", err);
+    return { error: err instanceof Error ? err.message : "Terjadi kesalahan server." };
+  }
 }
 
 export async function editIzinAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const session = await requireAdmin();
-  const parsed = editIzinSchema.safeParse({
-    id: formData.get("id"),
-    jenis_izin: formData.get("jenis_izin"),
-    tujuan: formData.get("tujuan"),
-    alasan: formData.get("alasan"),
-    tanggal_keluar: formData.get("tanggal_keluar"),
-    perkiraan_kembali: formData.get("perkiraan_kembali"),
-    catatan_perubahan: formData.get("catatan_perubahan"),
-  });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+  try {
+    const session = await requireAdmin();
+    const parsed = editIzinSchema.safeParse({
+      id: formData.get("id"),
+      jenis_izin: formData.get("jenis_izin"),
+      tujuan: formData.get("tujuan"),
+      alasan: formData.get("alasan"),
+      tanggal_keluar: formData.get("tanggal_keluar"),
+      perkiraan_kembali: formData.get("perkiraan_kembali"),
+      catatan_perubahan: formData.get("catatan_perubahan"),
+    });
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
 
-  const tanggalKeluarISO = wibInputToISOString(parsed.data.tanggal_keluar);
-  const perkiraanKembaliISO = wibInputToISOString(parsed.data.perkiraan_kembali);
-  if (!tanggalKeluarISO || !perkiraanKembaliISO) return { error: "Format tanggal tidak valid." };
-  if (new Date(perkiraanKembaliISO) <= new Date(tanggalKeluarISO)) {
-    return { error: "Perkiraan kembali harus setelah waktu keluar." };
-  }
-
-  const result = await editIzinByPengurus(
-    parsed.data.id,
-    Number(session.user.id),
-    parsed.data.catatan_perubahan,
-    {
-      jenis_izin: parsed.data.jenis_izin,
-      alasan: parsed.data.alasan,
-      tujuan: parsed.data.tujuan,
-      tanggal_keluar: tanggalKeluarISO,
-      perkiraan_kembali: perkiraanKembaliISO,
+    const tanggalKeluarISO = wibInputToISOString(parsed.data.tanggal_keluar);
+    const perkiraanKembaliISO = wibInputToISOString(parsed.data.perkiraan_kembali);
+    if (!tanggalKeluarISO || !perkiraanKembaliISO) return { error: "Format tanggal tidak valid." };
+    if (new Date(perkiraanKembaliISO) <= new Date(tanggalKeluarISO)) {
+      return { error: "Perkiraan kembali harus setelah waktu keluar." };
     }
-  );
-  if (result.error) return { error: result.error };
 
-  revalidatePath("/beranda");
-  return { success: true };
+    const result = await editIzinByPengurus(
+      parsed.data.id,
+      Number(session.user.id),
+      parsed.data.catatan_perubahan,
+      {
+        jenis_izin: parsed.data.jenis_izin,
+        alasan: parsed.data.alasan,
+        tujuan: parsed.data.tujuan,
+        tanggal_keluar: tanggalKeluarISO,
+        perkiraan_kembali: perkiraanKembaliISO,
+      }
+    );
+    if (result.error) return { error: result.error };
+
+    revalidatePath("/beranda");
+    return { success: true };
+  } catch (err) {
+    console.error("[editIzinAction]", err);
+    return { error: err instanceof Error ? err.message : "Terjadi kesalahan server." };
+  }
 }
 
 export async function hapusIzinAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const session = await requireAdmin();
-  const parsed = hapusIzinSchema.safeParse({
-    id: formData.get("id"),
-    alasan: formData.get("alasan"),
-  });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
+  try {
+    const session = await requireAdmin();
+    const parsed = hapusIzinSchema.safeParse({
+      id: formData.get("id"),
+      alasan: formData.get("alasan"),
+    });
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Data tidak valid." };
 
-  const result = await deleteIzinByPengurus(parsed.data.id, Number(session.user.id), parsed.data.alasan);
-  if (result.error) return { error: result.error };
+    const result = await deleteIzinByPengurus(parsed.data.id, Number(session.user.id), parsed.data.alasan);
+    if (result.error) return { error: result.error };
 
-  revalidatePath("/beranda");
-  return { success: true };
+    revalidatePath("/beranda");
+    return { success: true };
+  } catch (err) {
+    console.error("[hapusIzinAction]", err);
+    return { error: err instanceof Error ? err.message : "Terjadi kesalahan server." };
+  }
 }
-

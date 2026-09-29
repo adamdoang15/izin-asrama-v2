@@ -103,14 +103,14 @@ function DailyActivityGelaraView({
   const totalTidakHadirBulanan =
     mySummary.jumlahABulanan + (mySummary.jumlahSBulanan || 0) + (mySummary.jumlahIBulanan || 0);
 
-  const persenTidakHadirMingguan =
+  const persenAlphaMingguan =
     mySummary.totalTercatatMingguan > 0
-      ? Number(((totalTidakHadirMingguan / mySummary.totalTercatatMingguan) * 100).toFixed(1))
+      ? Number(((mySummary.jumlahAMingguan / mySummary.totalTercatatMingguan) * 100).toFixed(1))
       : null;
 
-  const persenTidakHadirBulanan =
+  const persenAlphaBulanan =
     mySummary.totalTercatatBulanan > 0
-      ? Number(((totalTidakHadirBulanan / mySummary.totalTercatatBulanan) * 100).toFixed(1))
+      ? Number(((mySummary.jumlahABulanan / mySummary.totalTercatatBulanan) * 100).toFixed(1))
       : null;
 
   return (
@@ -142,15 +142,14 @@ function DailyActivityGelaraView({
         {/* Card Mingguan */}
         <div
           onClick={() => setPeriodTab("mingguan")}
-          className={`cursor-pointer rounded-xl border p-5 transition-all shadow-xs ${
-            periodTab === "mingguan"
-              ? "border-teal bg-paper-raised ring-2 ring-teal"
-              : "border-line bg-paper-raised hover:border-ink-soft/40"
-          }`}
+          className={`cursor-pointer rounded-xl border p-5 transition-all shadow-xs ${periodTab === "mingguan"
+            ? "border-teal bg-paper-raised ring-2 ring-teal"
+            : "border-line bg-paper-raised hover:border-ink-soft/40"
+            }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-ink-soft">
-              Ketidakhadiran Minggu Ini
+              Pelanggaran Minggu Ini
             </span>
             <span className="text-xs text-teal font-medium">
               {currentWeek.shortLabel}
@@ -159,20 +158,18 @@ function DailyActivityGelaraView({
 
           <div className="mt-3 flex items-baseline gap-3">
             <span
-              className={`text-3xl font-extrabold ${
-                (persenTidakHadirMingguan ?? 0) > 0 ? "text-clay" : "text-sage"
-              }`}
+              className={`text-3xl font-extrabold ${(persenAlphaMingguan ?? 0) > 0 ? "text-clay" : "text-sage"
+                }`}
             >
-              {persenTidakHadirMingguan !== null ? `${persenTidakHadirMingguan.toFixed(1)}%` : "—"}
+              {persenAlphaMingguan !== null ? `${persenAlphaMingguan.toFixed(1)}%` : "—"}
             </span>
             <span
-              className={`text-xs font-semibold ${
-                (persenTidakHadirMingguan ?? 0) > 0 ? "text-clay" : "text-sage"
-              }`}
+              className={`text-xs font-semibold ${(persenAlphaMingguan ?? 0) > 0 ? "text-clay" : "text-sage"
+                }`}
             >
-              {(persenTidakHadirMingguan ?? 0) > 0
-                ? "Ketidakhadiran di minggu ini"
-                : "Kehadiran 100% (0.0% absen)"}
+              {(persenAlphaMingguan ?? 0) > 0
+                ? "Pelanggaran di minggu ini"
+                : "Nol pelanggaran (0.0%)"}
             </span>
           </div>
 
@@ -189,15 +186,14 @@ function DailyActivityGelaraView({
         {/* Card Bulanan */}
         <div
           onClick={() => setPeriodTab("bulanan")}
-          className={`cursor-pointer rounded-xl border p-5 transition-all shadow-xs ${
-            periodTab === "bulanan"
-              ? "border-teal bg-paper-raised ring-2 ring-teal"
-              : "border-line bg-paper-raised hover:border-ink-soft/40"
-          }`}
+          className={`cursor-pointer rounded-xl border p-5 transition-all shadow-xs ${periodTab === "bulanan"
+            ? "border-teal bg-paper-raised ring-2 ring-teal"
+            : "border-line bg-paper-raised hover:border-ink-soft/40"
+            }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-ink-soft">
-              Ketidakhadiran Bulan Ini
+              Pelanggaran Bulan Ini
             </span>
             <span className="text-xs text-teal font-medium">
               {initialData.month.label}
@@ -206,20 +202,18 @@ function DailyActivityGelaraView({
 
           <div className="mt-3 flex items-baseline gap-3">
             <span
-              className={`text-3xl font-extrabold ${
-                (persenTidakHadirBulanan ?? 0) > 0 ? "text-clay" : "text-sage"
-              }`}
+              className={`text-3xl font-extrabold ${(persenAlphaBulanan ?? 0) > 0 ? "text-clay" : "text-sage"
+                }`}
             >
-              {persenTidakHadirBulanan !== null ? `${persenTidakHadirBulanan.toFixed(1)}%` : "—"}
+              {persenAlphaBulanan !== null ? `${persenAlphaBulanan.toFixed(1)}%` : "—"}
             </span>
             <span
-              className={`text-xs font-semibold ${
-                (persenTidakHadirBulanan ?? 0) > 0 ? "text-clay" : "text-sage"
-              }`}
+              className={`text-xs font-semibold ${(persenAlphaBulanan ?? 0) > 0 ? "text-clay" : "text-sage"
+                }`}
             >
-              {(persenTidakHadirBulanan ?? 0) > 0
-                ? "Ketidakhadiran di bulan ini"
-                : "Kehadiran 100% (0.0% absen)"}
+              {(persenAlphaBulanan ?? 0) > 0
+                ? "Pelanggaran di bulan ini"
+                : "Nol pelanggaran (0.0% alpha)"}
             </span>
           </div>
 
@@ -293,14 +287,14 @@ function DailyActivityGelaraView({
                 item.status === "S"
                   ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50"
                   : item.status === "I"
-                  ? "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800/50"
-                  : "bg-clay-soft text-clay";
+                    ? "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800/50"
+                    : "bg-clay-soft text-clay";
               const statusLabel =
                 item.status === "S"
                   ? "Sakit (S)"
                   : item.status === "I"
-                  ? "Izin (I)"
-                  : "Alpha (A)";
+                    ? "Izin (I)"
+                    : "Alpha (A)";
 
               return (
                 <li
@@ -351,9 +345,9 @@ function DailyActivityPengurusView({
   const avgWeeklyProgress =
     validWeekly.length > 0
       ? Number((
-          validWeekly.reduce((acc, s) => acc + (s.progressMingguan ?? 0), 0) /
-          validWeekly.length
-        ).toFixed(1))
+        validWeekly.reduce((acc, s) => acc + (s.progressMingguan ?? 0), 0) /
+        validWeekly.length
+      ).toFixed(1))
       : null;
 
   const validMonthly = initialData.gelaraSummaries.filter(
@@ -362,9 +356,9 @@ function DailyActivityPengurusView({
   const avgMonthlyProgress =
     validMonthly.length > 0
       ? Number((
-          validMonthly.reduce((acc, s) => acc + (s.progressBulanan ?? 0), 0) /
-          validMonthly.length
-        ).toFixed(1))
+        validMonthly.reduce((acc, s) => acc + (s.progressBulanan ?? 0), 0) /
+        validMonthly.length
+      ).toFixed(1))
       : null;
 
   const totalWeeklyA = initialData.gelaraSummaries.reduce(
@@ -505,6 +499,8 @@ function DailyActivityPengurusView({
           summary={selectedGelaraForDetail}
           currentWeek={currentWeek}
           absentActivities={initialData.absentActivities}
+          monthLabel={initialData.month.label.replace(/\s\d{4}$/, "")}
+          year={initialData.month.year}
           onClose={() => setSelectedGelaraForDetail(null)}
         />
       )}

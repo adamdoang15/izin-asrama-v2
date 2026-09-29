@@ -2,11 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { AbsentActivityRecord, GelaraSummary, WeekPeriod } from "@/services/daily-activity.service";
+import dynamic from "next/dynamic";
+
+const SPPDFDownloadButton = dynamic(() => import("./SPPDFDownloadButton"), {
+  ssr: false,
+});
 
 interface DailyActivityDetailProps {
   summary: GelaraSummary | null;
   currentWeek: WeekPeriod;
   absentActivities: AbsentActivityRecord[];
+  monthLabel?: string;
+  year?: number;
   onClose: () => void;
 }
 
@@ -27,6 +34,8 @@ export default function DailyActivityDetail({
   summary,
   currentWeek,
   absentActivities,
+  monthLabel = "Bulan",
+  year = new Date().getFullYear(),
   onClose,
 }: DailyActivityDetailProps) {
   const [activeCard, setActiveCard] = useState<DetailCardType>("kehadiran-mingguan");
@@ -51,16 +60,23 @@ export default function DailyActivityDetail({
 
   const initial = summary.namaGelara.trim()?.[0]?.toUpperCase() ?? "?";
 
+  // Normalisasi nama yang konsisten dengan DailyActivityClient
+  const normalizeName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, "");
+
   // Filter activities for this gelara
   const gelaraAbsences = absentActivities.filter(
-    (a) => a.namaGelara.toLowerCase() === summary.namaGelara.toLowerCase()
+    (a) => normalizeName(a.namaGelara) === normalizeName(summary.namaGelara)
   );
 
   const weeklyAbsences = gelaraAbsences.filter(
     (a) => a.tanggal >= currentWeek.startDate && a.tanggal <= currentWeek.endDate
   );
 
-  const monthlyAbsences = gelaraAbsences;
+  // Filter bulanan: hanya tampilkan absent activities yang termasuk bulan yang dipilih
+  const selectedMonthPrefix = currentWeek.startDate.slice(0, 7); // "YYYY-MM"
+  const monthlyAbsences = gelaraAbsences.filter(
+    (a) => a.tanggal.startsWith(selectedMonthPrefix)
+  );
 
   const isWeekly = activeCard.includes("mingguan");
   const isPelanggaran = activeCard.includes("pelanggaran");
@@ -127,16 +143,28 @@ export default function DailyActivityDetail({
       >
         {/* Modal Header */}
         <div className="flex items-start justify-between border-b border-line px-5 sm:px-6 py-4">
-          <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-teal-soft text-base font-semibold text-teal">
-              {initial}
-            </span>
-            <div>
-              <h3 id="detail-modal-title" className="text-base font-semibold leading-tight text-ink">
-                {summary.namaGelara}
-              </h3>
-              <p className="text-xs text-ink-soft mt-0.5">Detail Monitoring Kehadiran & Pelanggaran</p>
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-teal-soft text-base font-semibold text-teal">
+                {initial}
+              </span>
+              <div>
+                <h3 id="detail-modal-title" className="text-base font-semibold leading-tight text-ink">
+                  {summary.namaGelara}
+                </h3>
+                <p className="text-xs text-ink-soft mt-0.5">Detail Monitoring Kehadiran & Pelanggaran</p>
+              </div>
             </div>
+            {summary.progressBulanan !== null && summary.progressBulanan < 85 && (
+              <div className="mr-4">
+                <SPPDFDownloadButton 
+                  monthLabel={monthLabel} 
+                  year={year} 
+                  gelara={summary} 
+                  absences={gelaraAbsences}
+                />
+              </div>
+            )}
           </div>
           <button
             type="button"
