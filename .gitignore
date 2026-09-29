@@ -45,3 +45,6 @@ CLAUDE.md
 
 # AI agent skills (personal, not for repo)
 .agents/
+
+# bun lockfile (project uses npm/package-lock.json)
+bun.lock

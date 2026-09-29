@@ -109,7 +109,7 @@ export default function EditIzinForm({ izin, onClose }: EditIzinFormProps) {
           name="catatan_perubahan"
           rows={2}
           required
-          placeholder="Contoh: Santri salah pilih jenis izin, seharusnya Menginap bukan Harian"
+          placeholder="Contoh: Gelara salah pilih jenis izin, seharusnya Menginap bukan Harian"
           className="w-full rounded-md border border-line bg-paper-raised px-3 py-2 text-sm outline-none focus:border-teal focus:ring-1 focus:ring-teal resize-none"
         />
       </div>

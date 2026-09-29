@@ -141,17 +141,17 @@ export default function AdminIzinRow({ izin }: { izin: IzinWithSantri }) {
               <input type="hidden" name="id" value={izin.id} />
               <div>
                 <p className="text-sm font-medium text-ink">
-                  Tandai kepulangan santri secara manual (tanpa validasi GPS)
+                  Tandai kepulangan gelara secara manual (tanpa validasi GPS)
                 </p>
                 <p className="text-xs text-ink-soft mt-0.5">
-                  Gunakan jika santri sudah berada di asrama namun terkendala GPS/sinyal. Wajib sertakan alasan.
+                  Gunakan jika gelara sudah berada di asrama namun terkendala GPS/sinyal. Wajib sertakan alasan.
                 </p>
               </div>
               <textarea
                 name="alasan"
                 rows={2}
                 required
-                placeholder="Contoh: Santri sudah tiba di asrama/pos, GPS di HP kendala timeout/sinyal"
+                placeholder="Contoh: Gelara sudah tiba di asrama/pos, GPS di HP kendala timeout/sinyal"
                 className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm resize-none"
               />
               {kembaliManualState.error && (

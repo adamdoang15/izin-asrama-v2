@@ -12,13 +12,15 @@ import { sendNotificationToUser } from "@/services/notification.service";
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  // Validasi secret header (opsional tapi sangat disarankan)
+  // Validasi secret header — WAJIB di production
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret) {
-    const authHeader = request.headers.get("authorization");
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!cronSecret) {
+    console.error("[Cron] CRON_SECRET belum dikonfigurasi. Set di environment variables.");
+    return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
+  }
+  const authHeader = request.headers.get("authorization");
+  if (authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const izinList = await getIzinMendekatiTenggat();
