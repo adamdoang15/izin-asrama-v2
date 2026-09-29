@@ -118,7 +118,7 @@ interface CacheEntry {
   sheetNames: string[];
 }
 
-let memoryCache: CacheEntry | null = null;
+const memoryCacheMap: Record<string, CacheEntry> = {};
 const CACHE_TTL_MS = 60 * 1000; // 1 menit cache
 
 // Cache untuk hasil auto-discovery nama sheet
@@ -127,7 +127,7 @@ interface SheetDiscoveryCache {
   sheetNames: string[];
 }
 
-let sheetDiscoveryCache: SheetDiscoveryCache | null = null;
+const sheetDiscoveryCacheMap: Record<string, SheetDiscoveryCache> = {};
 const DISCOVERY_CACHE_TTL_MS = 5 * 60 * 1000; // 5 menit cache
 
 /**
@@ -137,11 +137,12 @@ const DISCOVERY_CACHE_TTL_MS = 5 * 60 * 1000; // 5 menit cache
  */
 async function discoverSheetNames(sheetId: string): Promise<string[]> {
   const now = Date.now();
+  const cachedDiscovery = sheetDiscoveryCacheMap[sheetId];
   if (
-    sheetDiscoveryCache &&
-    now - sheetDiscoveryCache.timestamp < DISCOVERY_CACHE_TTL_MS
+    cachedDiscovery &&
+    now - cachedDiscovery.timestamp < DISCOVERY_CACHE_TTL_MS
   ) {
-    return sheetDiscoveryCache.sheetNames;
+    return cachedDiscovery.sheetNames;
   }
 
   try {
@@ -211,7 +212,7 @@ async function discoverSheetNames(sheetId: string): Promise<string[]> {
 
     if (names.length > 0) {
       console.log(`[SheetDiscovery] Ditemukan ${names.length} sheet:`, names);
-      sheetDiscoveryCache = { timestamp: now, sheetNames: names };
+      sheetDiscoveryCacheMap[sheetId] = { timestamp: now, sheetNames: names };
       return names;
     }
 
@@ -510,6 +511,28 @@ function parseCsvLine(line: string): string[] {
   return result;
 }
 
+export function getConfiguredSheetMap(): Record<string, string> {
+  const jsonStr = process.env.DAILY_ACTIVITY_SHEETS;
+  if (jsonStr) {
+    try {
+      const parsed = JSON.parse(jsonStr);
+      if (typeof parsed === "object" && parsed !== null) {
+        return parsed as Record<string, string>;
+      }
+    } catch (e) {
+      console.warn("[SheetConfig] Gagal parse DAILY_ACTIVITY_SHEETS JSON:", e);
+    }
+  }
+
+  const fallbackSheetId = process.env.DAILY_ACTIVITY_SHEET_ID;
+  const activePeriod = getActiveYearAndMonth();
+  if (fallbackSheetId) {
+    return { [activePeriod.monthId]: fallbackSheetId };
+  }
+
+  return {};
+}
+
 export function getActiveYearAndMonth(): { year: number; month: number; monthId: string } {
   const envMonthId = process.env.DAILY_ACTIVITY_MONTH_ID;
   if (envMonthId && /^\d{4}-\d{2}$/.test(envMonthId)) {
@@ -530,20 +553,29 @@ export function getActiveYearAndMonth(): { year: number; month: number; monthId:
 /**
  * Fetch all raw activity records from configured source or sample fallback
  */
-export async function getRawDailyActivityRecords(): Promise<{
+export async function getRawDailyActivityRecords(targetMonthId?: string): Promise<{
   records: NormalizedActivityRecord[];
   sourceType: "google-sheet" | "excel" | "sample";
   sheetNames: string[];
 }> {
   const now = Date.now();
-  if (memoryCache && now - memoryCache.timestamp < CACHE_TTL_MS) {
-    return { records: memoryCache.data, sourceType: memoryCache.sourceType, sheetNames: memoryCache.sheetNames };
+  const cacheKey = targetMonthId || "default";
+  const cached = memoryCacheMap[cacheKey];
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+    return { records: cached.data, sourceType: cached.sourceType, sheetNames: cached.sheetNames };
   }
 
   const sheetUrl = process.env.DAILY_ACTIVITY_SHEET_URL;
-  const sheetId = process.env.DAILY_ACTIVITY_SHEET_ID;
+  const sheetMap = getConfiguredSheetMap();
+  
+  let activePeriod = getActiveYearAndMonth();
+  if (targetMonthId && /^\d{4}-\d{2}$/.test(targetMonthId)) {
+    const [y, m] = targetMonthId.split("-").map((s) => parseInt(s, 10));
+    activePeriod = { year: y, month: m, monthId: targetMonthId };
+  }
+
+  const sheetId = sheetMap[activePeriod.monthId] || process.env.DAILY_ACTIVITY_SHEET_ID;
   const apiKey = process.env.GOOGLE_API_KEY;
-  const activePeriod = getActiveYearAndMonth();
 
   // 1. Google Sheets API via Key
   if (sheetId && apiKey) {
@@ -605,7 +637,7 @@ export async function getRawDailyActivityRecords(): Promise<{
       }
 
       if (records.length > 0) {
-        memoryCache = { timestamp: now, data: records, sourceType: "google-sheet", sheetNames: sheetsToFetch };
+        memoryCacheMap[cacheKey] = { timestamp: now, data: records, sourceType: "google-sheet", sheetNames: sheetsToFetch };
         return { records, sourceType: "google-sheet", sheetNames: sheetsToFetch };
       }
     } catch (err) {
@@ -617,7 +649,6 @@ export async function getRawDailyActivityRecords(): Promise<{
   //    Gunakan auto-discovery nama sheet via htmlview, fallback ke ACTIVITY_SHEETS
   if (sheetId && !apiKey) {
     try {
-      // Auto-discover nama sheet; jika gagal gunakan daftar hardcoded
       let sheetsToFetch: string[] = await discoverSheetNames(sheetId);
       if (sheetsToFetch.length === 0) {
         console.warn("[SheetDiscovery] Menggunakan daftar sheet hardcoded sebagai fallback.");
@@ -639,7 +670,7 @@ export async function getRawDailyActivityRecords(): Promise<{
       }
 
       if (records.length > 0) {
-        memoryCache = { timestamp: now, data: records, sourceType: "google-sheet", sheetNames: sheetsToFetch };
+        memoryCacheMap[cacheKey] = { timestamp: now, data: records, sourceType: "google-sheet", sheetNames: sheetsToFetch };
         return { records, sourceType: "google-sheet", sheetNames: sheetsToFetch };
       }
     } catch (err) {
@@ -655,7 +686,7 @@ export async function getRawDailyActivityRecords(): Promise<{
         const json = await res.json();
         if (Array.isArray(json) && json.length > 0) {
           const discovered = Array.from(new Set(json.map((r: { aktivitas?: string }) => r.aktivitas).filter(Boolean))) as string[];
-          memoryCache = { timestamp: now, data: json, sourceType: "google-sheet", sheetNames: discovered };
+          memoryCacheMap[cacheKey] = { timestamp: now, data: json, sourceType: "google-sheet", sheetNames: discovered };
           return { records: json, sourceType: "google-sheet", sheetNames: discovered };
         }
       }
@@ -667,7 +698,7 @@ export async function getRawDailyActivityRecords(): Promise<{
   // 4. Default Sample Data Fallback (September 2026)
   const sampleRecords = generateSampleData();
   const sampleSheets = [...ACTIVITY_SHEETS];
-  memoryCache = { timestamp: now, data: sampleRecords, sourceType: "sample", sheetNames: sampleSheets };
+  memoryCacheMap[cacheKey] = { timestamp: now, data: sampleRecords, sourceType: "sample", sheetNames: sampleSheets };
   return { records: sampleRecords, sourceType: "sample", sheetNames: sampleSheets };
 }
 
@@ -680,8 +711,9 @@ export async function getDailyActivityData(params?: {
   date?: string;
   gelara?: string;
 }): Promise<DailyActivityDataResult> {
-  const { records, sourceType, sheetNames } = await getRawDailyActivityRecords();
   const defaultPeriod = getActiveYearAndMonth();
+  const requestedMonthId = params?.monthId || defaultPeriod.monthId;
+  const { records, sourceType, sheetNames } = await getRawDailyActivityRecords(requestedMonthId);
 
   const activeSheetNames = sheetNames && sheetNames.length > 0
     ? sheetNames
@@ -689,7 +721,7 @@ export async function getDailyActivityData(params?: {
   const totalSheetsCount = activeSheetNames.length;
 
   // Determine active month
-  const monthId = params?.monthId || defaultPeriod.monthId;
+  const monthId = requestedMonthId;
   const [year, month] = monthId.split("-").map((s) => parseInt(s, 10));
 
   const monthName = NAMA_BULAN[month - 1] || "Bulan";
@@ -700,8 +732,11 @@ export async function getDailyActivityData(params?: {
     month,
   };
 
-  // Extract available months dynamically from records
+  // Extract available months dynamically from records and configured sheet map
   const monthSet = new Set<string>();
+  const sheetMap = getConfiguredSheetMap();
+  Object.keys(sheetMap).forEach((mId) => monthSet.add(mId));
+
   records.forEach((r) => {
     if (r.tanggal && /^\d{4}-\d{2}/.test(r.tanggal)) {
       monthSet.add(r.tanggal.slice(0, 7));
