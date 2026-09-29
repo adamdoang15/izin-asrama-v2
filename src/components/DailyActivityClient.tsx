@@ -274,7 +274,7 @@ function DailyActivityGelaraView({
         {displayedAbsences.length === 0 ? (
           <div className="rounded-xl border border-line bg-paper p-8 text-center space-y-1">
             <p className="text-sm font-semibold text-sage">
-              Alhamdulillah, tidak ada catatan Ketidakhadiran 🎉
+              Alhamdulillah, tidak ada catatan Ketidakhadiran
             </p>
             <p className="text-xs text-ink-soft">
               Kamu telah mengikuti seluruh kegiatan terjadwal dengan baik pada periode {periodTab === "mingguan" ? currentWeek.shortLabel : "bulan ini"}.

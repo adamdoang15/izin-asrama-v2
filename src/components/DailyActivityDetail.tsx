@@ -157,10 +157,10 @@ export default function DailyActivityDetail({
             </div>
             {summary.progressBulanan !== null && summary.progressBulanan < 85 && (
               <div className="mr-4">
-                <SPPDFDownloadButton 
-                  monthLabel={monthLabel} 
-                  year={year} 
-                  gelara={summary} 
+                <SPPDFDownloadButton
+                  monthLabel={monthLabel}
+                  year={year}
+                  gelara={summary}
                   absences={gelaraAbsences}
                 />
               </div>
@@ -395,7 +395,7 @@ export default function DailyActivityDetail({
             {currentList.length === 0 ? (
               <div className="rounded-xl border border-line bg-paper p-6 text-center">
                 <p className="text-sm font-medium text-sage">
-                  {isPelanggaran ? "Alhamdulillah, tidak ada catatan Pelanggaran (Alpha) 🎉" : "Alhamdulillah, tidak ada catatan Ketidakhadiran 🎉"}
+                  {isPelanggaran ? "Alhamdulillah, tidak ada catatan Pelanggaran" : ", tidak ada catatan Ketidakhadiran"}
                 </p>
                 <p className="text-xs text-ink-soft mt-1">
                   Seluruh kegiatan tercatat telah diikuti dengan baik pada periode {isWeekly ? currentWeek.shortLabel : "bulan ini"}.
