@@ -75,6 +75,7 @@ export type Database = {
           late_minutes: number | null
           deleted_by: number | null
           deleted_at: string | null
+          reminded_at: string | null
           created_at: string
           updated_at: string
         }
@@ -95,6 +96,7 @@ export type Database = {
           late_minutes?: number | null
           deleted_by?: number | null
           deleted_at?: string | null
+          reminded_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -115,6 +117,7 @@ export type Database = {
           late_minutes?: number | null
           deleted_by?: number | null
           deleted_at?: string | null
+          reminded_at?: string | null
           created_at?: string
           updated_at?: string
         }
