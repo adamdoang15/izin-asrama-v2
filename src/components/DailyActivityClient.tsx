@@ -341,7 +341,7 @@ function DailyActivityPengurusView({
   const router = useRouter();
   const [selectedGelaraForDetail, setSelectedGelaraForDetail] =
     useState<GelaraSummary | null>(null);
-  const [activeView, setActiveView] = useState<"summary" | "table" | "all">("all");
+  const [activeView, setActiveView] = useState<"summary" | "table">("summary");
 
   const currentWeek =
     initialData.weeks.find((w) => w.id === initialData.selectedWeekId) ||
@@ -422,16 +422,6 @@ function DailyActivityPengurusView({
         <div className="flex items-center gap-1 rounded-lg border border-line bg-paper-raised p-1 self-start md:self-auto">
           <button
             type="button"
-            onClick={() => setActiveView("all")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${activeView === "all"
-              ? "bg-teal text-paper-raised"
-              : "text-ink-soft hover:text-ink"
-              }`}
-          >
-            Semua Tampilan
-          </button>
-          <button
-            type="button"
             onClick={() => setActiveView("summary")}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${activeView === "summary"
               ? "bg-teal text-paper-raised"
@@ -504,7 +494,7 @@ function DailyActivityPengurusView({
       </section>
 
       {/* Summary Table / Cards */}
-      {(activeView === "all" || activeView === "summary") && (
+      {activeView === "summary" && (
         <section className="space-y-4 pt-2">
           <DailyActivitySummary
             summaries={initialData.gelaraSummaries}
@@ -516,7 +506,7 @@ function DailyActivityPengurusView({
       )}
 
       {/* Absent Activities Table / List */}
-      {(activeView === "all" || activeView === "table") && (
+      {activeView === "table" && (
         <section className="space-y-4 pt-4 border-t border-line">
           <DailyActivityTable
             records={initialData.absentActivities}
