@@ -3,10 +3,10 @@
  *
  * Bertanggung jawab untuk:
  * 1. Mengambil data dari Google Sheets / Excel / Endpoint / Sample Fallback
- * 2. Membaca & menormalisasi 16 sheet aktivitas gelara
- * 3. Menghitung progress mingguan & bulanan sesuai rumus:
- *    Progress (%) = ((Total kegiatan tercatat - Jumlah status A) / Total kegiatan tercatat) * 100
- * 4. Menyaring daftar ketidakhadiran (hanya status 'A')
+ * 2. Membaca & menormalisasi 24 sheet aktivitas gelara
+ * 3. Menghitung progress mingguan & bulanan sesuai rumus Opsi 1:
+ *    Progress (%) = ((Total kegiatan tercatat - (Jumlah status A + S + I)) / Total kegiatan tercatat) * 100
+ * 4. Menyaring daftar ketidakhadiran (status A, S, dan I)
  * 5. Menangani caching, filter, dan error state dengan aman tanpa crash
  */
 
@@ -22,15 +22,23 @@ export const ACTIVITY_SHEETS = [
   "TC",
   "PIKET",
   "MAKAN PAGI",
+  "OLAHRAGA",
   "BERANGKAT SEKOLAH",
   "SHOLAT DZUHUR",
   "SHOLAT ASHAR",
+  "PENGAJIAN MINGGU",
+  "PULANG SEKOLAH",
+  "MANDI SORE",
   "SHOLAT MAGHRIB",
   "SHOLAT ISYA",
   "MAKAN MALAM",
+  "NONTON BARENG",
+  "ZOOM VICON",
+  "KOORDINASI BULANAN",
   "KBM",
   "APEL MALAM",
   "PENGUMPULAN HP",
+  "OPSIH",
 ] as const;
 
 export type ActivityName = string;
@@ -51,6 +59,7 @@ export interface AbsentActivityRecord {
   hari: string; // e.g. "Kamis"
   namaGelara: string;
   aktivitas: string;
+  status: ActivityStatus;
 }
 
 export interface GelaraSummary {
@@ -60,6 +69,10 @@ export interface GelaraSummary {
   progressBulanan: number | null; // null jika tidak ada data tercatat
   jumlahAMingguan: number;
   jumlahABulanan: number;
+  jumlahSMingguan: number;
+  jumlahSBulanan: number;
+  jumlahIMingguan: number;
+  jumlahIBulanan: number;
   totalTercatatMingguan: number;
   totalTercatatBulanan: number;
 }
@@ -91,6 +104,8 @@ export interface DailyActivityDataResult {
   allGelaraNames: string[];
   totalActivitiesCount: number;
   totalAbsentCount: number;
+  totalSheetsCount: number;
+  sheetNames: string[];
   sourceType: "google-sheet" | "excel" | "sample";
   lastUpdated: string;
 }
@@ -100,6 +115,7 @@ interface CacheEntry {
   timestamp: number;
   data: NormalizedActivityRecord[];
   sourceType: "google-sheet" | "excel" | "sample";
+  sheetNames: string[];
 }
 
 let memoryCache: CacheEntry | null = null;
@@ -139,12 +155,36 @@ async function discoverSheetNames(sheetId: string): Promise<string[]> {
     const html = await res.text();
     const names: string[] = [];
 
-    // Pola 1: <li id="sheet-button-...">Nama Sheet</li>
-    const pattern1 = /<li[^>]*id=["']sheet-button-[^"']*["'][^>]*>([^<]+)<\/li>/gi;
+    // Pola 0 (Google Sheets script items modern): items.push({name: "...", ...})
+    const pattern0 = /items\.push\({\s*name:\s*["']([^"']+)["']/gi;
     let m: RegExpExecArray | null;
-    while ((m = pattern1.exec(html)) !== null) {
+    while ((m = pattern0.exec(html)) !== null) {
       const name = m[1].trim();
-      if (name && !names.includes(name)) names.push(name);
+      if (name && !names.includes(name) && name.toUpperCase() !== "REKAP") {
+        names.push(name);
+      }
+    }
+
+    // Pola script fallback: {name: "..."
+    if (names.length === 0) {
+      const patternScript = /\{name:\s*["']([^"']+)["']/gi;
+      while ((m = patternScript.exec(html)) !== null) {
+        const name = m[1].trim();
+        if (name && !names.includes(name) && name.toUpperCase() !== "REKAP") {
+          names.push(name);
+        }
+      }
+    }
+
+    // Pola 1 (HTML <li> tab elements): <li id="sheet-button-...">Nama Sheet</li>
+    if (names.length === 0) {
+      const pattern1 = /<li[^>]*id=["']sheet-button-[^"']*["'][^>]*>([^<]+)<\/li>/gi;
+      while ((m = pattern1.exec(html)) !== null) {
+        const name = m[1].trim();
+        if (name && !names.includes(name) && name.toUpperCase() !== "REKAP") {
+          names.push(name);
+        }
+      }
     }
 
     // Pola 2 (fallback): data-name="..." pada elemen tab
@@ -152,7 +192,9 @@ async function discoverSheetNames(sheetId: string): Promise<string[]> {
       const pattern2 = /data-name=["']([^"']+)["']/gi;
       while ((m = pattern2.exec(html)) !== null) {
         const name = m[1].trim();
-        if (name && !names.includes(name)) names.push(name);
+        if (name && !names.includes(name) && name.toUpperCase() !== "REKAP") {
+          names.push(name);
+        }
       }
     }
 
@@ -161,7 +203,7 @@ async function discoverSheetNames(sheetId: string): Promise<string[]> {
       const pattern3 = /class=["'][^"']*goog-tab[^"']*["'][^>]*>([^<]+)</gi;
       while ((m = pattern3.exec(html)) !== null) {
         const name = m[1].trim();
-        if (name && name.length > 0 && name.length < 100 && !names.includes(name)) {
+        if (name && name.length > 0 && name.length < 100 && !names.includes(name) && name.toUpperCase() !== "REKAP") {
           names.push(name);
         }
       }
@@ -491,10 +533,11 @@ export function getActiveYearAndMonth(): { year: number; month: number; monthId:
 export async function getRawDailyActivityRecords(): Promise<{
   records: NormalizedActivityRecord[];
   sourceType: "google-sheet" | "excel" | "sample";
+  sheetNames: string[];
 }> {
   const now = Date.now();
   if (memoryCache && now - memoryCache.timestamp < CACHE_TTL_MS) {
-    return { records: memoryCache.data, sourceType: memoryCache.sourceType };
+    return { records: memoryCache.data, sourceType: memoryCache.sourceType, sheetNames: memoryCache.sheetNames };
   }
 
   const sheetUrl = process.env.DAILY_ACTIVITY_SHEET_URL;
@@ -505,8 +548,13 @@ export async function getRawDailyActivityRecords(): Promise<{
   // 1. Google Sheets API via Key
   if (sheetId && apiKey) {
     try {
+      let sheetsToFetch: string[] = await discoverSheetNames(sheetId);
+      if (sheetsToFetch.length === 0) {
+        sheetsToFetch = [...ACTIVITY_SHEETS];
+      }
+
       const records: NormalizedActivityRecord[] = [];
-      const fetchPromises = ACTIVITY_SHEETS.map(async (sheetName) => {
+      const fetchPromises = sheetsToFetch.map(async (sheetName) => {
         const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(sheetName)}?key=${apiKey}`;
         const res = await fetch(url, { cache: "no-store" });
         if (!res.ok) return [];
@@ -557,8 +605,8 @@ export async function getRawDailyActivityRecords(): Promise<{
       }
 
       if (records.length > 0) {
-        memoryCache = { timestamp: now, data: records, sourceType: "google-sheet" };
-        return { records, sourceType: "google-sheet" };
+        memoryCache = { timestamp: now, data: records, sourceType: "google-sheet", sheetNames: sheetsToFetch };
+        return { records, sourceType: "google-sheet", sheetNames: sheetsToFetch };
       }
     } catch (err) {
       console.warn("Google Sheets API fetch failed, falling back to sample data:", err);
@@ -591,8 +639,8 @@ export async function getRawDailyActivityRecords(): Promise<{
       }
 
       if (records.length > 0) {
-        memoryCache = { timestamp: now, data: records, sourceType: "google-sheet" };
-        return { records, sourceType: "google-sheet" };
+        memoryCache = { timestamp: now, data: records, sourceType: "google-sheet", sheetNames: sheetsToFetch };
+        return { records, sourceType: "google-sheet", sheetNames: sheetsToFetch };
       }
     } catch (err) {
       console.warn("Google Sheets CSV fetch failed, falling back to sample data:", err);
@@ -606,8 +654,9 @@ export async function getRawDailyActivityRecords(): Promise<{
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json) && json.length > 0) {
-          memoryCache = { timestamp: now, data: json, sourceType: "google-sheet" };
-          return { records: json, sourceType: "google-sheet" };
+          const discovered = Array.from(new Set(json.map((r: { aktivitas?: string }) => r.aktivitas).filter(Boolean))) as string[];
+          memoryCache = { timestamp: now, data: json, sourceType: "google-sheet", sheetNames: discovered };
+          return { records: json, sourceType: "google-sheet", sheetNames: discovered };
         }
       }
     } catch (err) {
@@ -617,8 +666,9 @@ export async function getRawDailyActivityRecords(): Promise<{
 
   // 4. Default Sample Data Fallback (September 2026)
   const sampleRecords = generateSampleData();
-  memoryCache = { timestamp: now, data: sampleRecords, sourceType: "sample" };
-  return { records: sampleRecords, sourceType: "sample" };
+  const sampleSheets = [...ACTIVITY_SHEETS];
+  memoryCache = { timestamp: now, data: sampleRecords, sourceType: "sample", sheetNames: sampleSheets };
+  return { records: sampleRecords, sourceType: "sample", sheetNames: sampleSheets };
 }
 
 /**
@@ -630,8 +680,13 @@ export async function getDailyActivityData(params?: {
   date?: string;
   gelara?: string;
 }): Promise<DailyActivityDataResult> {
-  const { records, sourceType } = await getRawDailyActivityRecords();
+  const { records, sourceType, sheetNames } = await getRawDailyActivityRecords();
   const defaultPeriod = getActiveYearAndMonth();
+
+  const activeSheetNames = sheetNames && sheetNames.length > 0
+    ? sheetNames
+    : Array.from(new Set(records.map((r) => r.aktivitas).filter(Boolean)));
+  const totalSheetsCount = activeSheetNames.length;
 
   // Determine active month
   const monthId = params?.monthId || defaultPeriod.monthId;
@@ -706,8 +761,11 @@ export async function getDailyActivityData(params?: {
     const monthRecords = gelaraRecords.filter((r) => r.tanggal.startsWith(monthId));
     const totalTercatatBulanan = monthRecords.length;
     const jumlahABulanan = monthRecords.filter((r) => r.status === "A").length;
+    const jumlahSBulanan = monthRecords.filter((r) => r.status === "S").length;
+    const jumlahIBulanan = monthRecords.filter((r) => r.status === "I").length;
+    const totalTidakHadirBulanan = jumlahABulanan + jumlahSBulanan + jumlahIBulanan;
     const progressBulanan = totalTercatatBulanan > 0
-      ? Number((((totalTercatatBulanan - jumlahABulanan) / totalTercatatBulanan) * 100).toFixed(1))
+      ? Number((((totalTercatatBulanan - totalTidakHadirBulanan) / totalTercatatBulanan) * 100).toFixed(1))
       : null;
 
     // Weekly aggregation (currentWeek.startDate <= tanggal <= currentWeek.endDate)
@@ -716,8 +774,11 @@ export async function getDailyActivityData(params?: {
     );
     const totalTercatatMingguan = weekRecords.length;
     const jumlahAMingguan = weekRecords.filter((r) => r.status === "A").length;
+    const jumlahSMingguan = weekRecords.filter((r) => r.status === "S").length;
+    const jumlahIMingguan = weekRecords.filter((r) => r.status === "I").length;
+    const totalTidakHadirMingguan = jumlahAMingguan + jumlahSMingguan + jumlahIMingguan;
     const progressMingguan = totalTercatatMingguan > 0
-      ? Number((((totalTercatatMingguan - jumlahAMingguan) / totalTercatatMingguan) * 100).toFixed(1))
+      ? Number((((totalTercatatMingguan - totalTidakHadirMingguan) / totalTercatatMingguan) * 100).toFixed(1))
       : null;
 
     gelaraSummaries.push({
@@ -727,13 +788,17 @@ export async function getDailyActivityData(params?: {
       progressBulanan,
       jumlahAMingguan,
       jumlahABulanan,
+      jumlahSMingguan,
+      jumlahSBulanan,
+      jumlahIMingguan,
+      jumlahIBulanan,
       totalTercatatMingguan,
       totalTercatatBulanan,
     });
   });
 
-  // Extract all absent records (status === 'A')
-  let absentRecordsRaw = records.filter((r) => r.status === "A");
+  // Extract all absent/exception records (status === 'A' | 'S' | 'I')
+  let absentRecordsRaw = records.filter((r) => ["A", "S", "I"].includes(r.status));
 
   // Apply filters to absent list if specified
   if (params?.date) {
@@ -760,12 +825,13 @@ export async function getDailyActivityData(params?: {
   });
 
   const absentActivities: AbsentActivityRecord[] = absentRecordsRaw.map((r, i) => ({
-    id: `${r.tanggal}-${r.namaGelara}-${r.aktivitas}-${i}`,
+    id: `${r.tanggal}-${r.namaGelara}-${r.aktivitas}-${r.status}-${i}`,
     tanggal: r.tanggal,
     tanggalFormatted: formatTanggalIndo(r.tanggal),
     hari: getHariIndo(r.tanggal),
     namaGelara: r.namaGelara,
     aktivitas: r.aktivitas,
+    status: r.status,
   }));
 
   const totalActivitiesCount = records.length;
@@ -782,6 +848,8 @@ export async function getDailyActivityData(params?: {
     allGelaraNames,
     totalActivitiesCount,
     totalAbsentCount,
+    totalSheetsCount,
+    sheetNames: activeSheetNames,
     sourceType,
     lastUpdated: new Date().toISOString(),
   };

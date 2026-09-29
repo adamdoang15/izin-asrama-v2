@@ -98,12 +98,12 @@ export default function DailyActivityTable({
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-base font-semibold">Daftar Kegiatan yang Tidak Diikuti</h2>
-            <span className="inline-flex items-center rounded-full bg-clay-soft px-2.5 py-0.5 text-xs font-semibold text-clay">
-              {filteredRecords.length} Record Alpha (A)
+            <span className="inline-flex items-center rounded-full bg-teal-soft px-2.5 py-0.5 text-xs font-semibold text-teal">
+              {filteredRecords.length} Record
             </span>
           </div>
           <p className="text-xs text-ink-soft mt-0.5">
-            Menampilkan pelanggaran ketidakhadiran (status A) untuk penanganan pengurus.
+            Menampilkan catatan ketidakhadiran (Status A, S, dan I) untuk pemantauan pengurus.
           </p>
         </div>
       </div>
@@ -316,43 +316,58 @@ export default function DailyActivityTable({
                     <div className="max-w-sm mx-auto space-y-1">
                       <p className="font-semibold text-ink">Tidak ada catatan ketidakhadiran</p>
                       <p className="text-xs text-ink-soft">
-                        Tidak ada aktivitas berstatus A pada filter yang dipilih.
+                        Tidak ada aktivitas berstatus A, S, atau I pada filter yang dipilih.
                       </p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                filteredRecords.map((item, idx) => (
-                  <tr key={item.id} className="hover:bg-paper/40 transition-colors">
-                    <td className="px-4 py-3.5 text-center text-xs text-ink-soft font-medium">
-                      {idx + 1}
-                    </td>
-                    <td className="px-4 py-3.5 text-xs font-medium text-ink whitespace-nowrap">
-                      <div>
-                        <span>{item.tanggalFormatted}</span>
-                        <span className="block text-[11px] text-ink-soft font-normal">{item.hari}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 font-medium text-ink">
-                      <div className="flex items-center gap-2">
-                        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-teal-soft text-[11px] font-semibold text-teal">
-                          {item.namaGelara.trim()?.[0]?.toUpperCase()}
-                        </span>
-                        <span>{item.namaGelara}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 text-xs font-semibold text-ink">
-                      <span className="inline-block rounded-md bg-paper border border-line px-2.5 py-1">
-                        {item.aktivitas}
+                filteredRecords.map((item, idx) => {
+                  const statusBadge =
+                    item.status === "S" ? (
+                      <span className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-800/50 px-2.5 py-0.5 text-xs font-semibold text-amber-800 dark:text-amber-300">
+                        Sakit (S)
                       </span>
-                    </td>
-                    <td className="px-4 py-3.5 text-center">
+                    ) : item.status === "I" ? (
+                      <span className="inline-flex items-center rounded-full bg-sky-100 dark:bg-sky-900/40 border border-sky-200 dark:border-sky-800/50 px-2.5 py-0.5 text-xs font-semibold text-sky-800 dark:text-sky-300">
+                        Izin (I)
+                      </span>
+                    ) : (
                       <span className="inline-flex items-center rounded-full bg-clay-soft px-2.5 py-0.5 text-xs font-semibold text-clay">
                         Alpha (A)
                       </span>
-                    </td>
-                  </tr>
-                ))
+                    );
+
+                  return (
+                    <tr key={item.id} className="hover:bg-paper/40 transition-colors">
+                      <td className="px-4 py-3.5 text-center text-xs text-ink-soft font-medium">
+                        {idx + 1}
+                      </td>
+                      <td className="px-4 py-3.5 text-xs font-medium text-ink whitespace-nowrap">
+                        <div>
+                          <span>{item.tanggalFormatted}</span>
+                          <span className="block text-[11px] text-ink-soft font-normal">{item.hari}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 font-medium text-ink">
+                        <div className="flex items-center gap-2">
+                          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-teal-soft text-[11px] font-semibold text-teal">
+                            {item.namaGelara.trim()?.[0]?.toUpperCase()}
+                          </span>
+                          <span>{item.namaGelara}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-xs font-semibold text-ink">
+                        <span className="inline-block rounded-md bg-paper border border-line px-2.5 py-1">
+                          {item.aktivitas}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-center">
+                        {statusBadge}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -366,28 +381,43 @@ export default function DailyActivityTable({
             Tidak ada catatan ketidakhadiran pada filter ini.
           </div>
         ) : (
-          filteredRecords.map((item) => (
-            <div
-              key={item.id}
-              className="rounded-xl border border-line bg-paper-raised p-3.5 shadow-xs space-y-2"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h4 className="text-sm font-semibold leading-tight">{item.namaGelara}</h4>
-                  <p className="text-[11px] text-ink-soft mt-0.5">
-                    {item.hari}, {item.tanggalFormatted}
-                  </p>
-                </div>
+          filteredRecords.map((item) => {
+            const statusBadge =
+              item.status === "S" ? (
+                <span className="shrink-0 inline-flex items-center rounded-md bg-amber-100 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-800/50 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:text-amber-300">
+                  Sakit (S)
+                </span>
+              ) : item.status === "I" ? (
+                <span className="shrink-0 inline-flex items-center rounded-md bg-sky-100 dark:bg-sky-900/40 border border-sky-200 dark:border-sky-800/50 px-2 py-0.5 text-xs font-semibold text-sky-800 dark:text-sky-300">
+                  Izin (I)
+                </span>
+              ) : (
                 <span className="shrink-0 inline-flex items-center rounded-md bg-clay-soft px-2 py-0.5 text-xs font-semibold text-clay">
                   Status A
                 </span>
+              );
+
+            return (
+              <div
+                key={item.id}
+                className="rounded-xl border border-line bg-paper-raised p-3.5 shadow-xs space-y-2"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h4 className="text-sm font-semibold leading-tight">{item.namaGelara}</h4>
+                    <p className="text-[11px] text-ink-soft mt-0.5">
+                      {item.hari}, {item.tanggalFormatted}
+                    </p>
+                  </div>
+                  {statusBadge}
+                </div>
+                <div className="rounded-lg bg-paper p-2 text-xs font-medium text-ink flex items-center gap-2">
+                  <span className="text-[10px] uppercase font-semibold text-ink-soft">Kegiatan:</span>
+                  <span className="font-semibold text-ink">{item.aktivitas}</span>
+                </div>
               </div>
-              <div className="rounded-lg bg-paper p-2 text-xs font-medium text-ink flex items-center gap-2">
-                <span className="text-[10px] uppercase font-semibold text-ink-soft">Kegiatan:</span>
-                <span className="font-semibold text-clay">{item.aktivitas}</span>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
