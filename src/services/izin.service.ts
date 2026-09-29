@@ -778,3 +778,44 @@ export async function deleteIzinByPengurus(
 
   return {};
 }
+
+/**
+ * Cari izin yang perkiraan_kembali-nya jatuh dalam window [now, now+10 menit],
+ * masih SEDANG_KELUAR, dan belum pernah menerima notifikasi reminder.
+ * "Belum menerima notifikasi" ditandai dari kolom `reminded_at IS NULL`.
+ */
+export async function getIzinMendekatiTenggat(): Promise<
+  { id: number; user_id: number; tujuan: string; perkiraan_kembali: string }[]
+> {
+  const now = new Date();
+  const windowEnd = new Date(now.getTime() + 10 * 60 * 1000); // +10 menit
+
+  const { data, error } = await supabase
+    .from("izin")
+    .select("id, user_id, tujuan, perkiraan_kembali")
+    .eq("status", "SEDANG_KELUAR")
+    .is("reminded_at", null)
+    .gte("perkiraan_kembali", now.toISOString())
+    .lte("perkiraan_kembali", windowEnd.toISOString());
+
+  if (error) {
+    console.error("Gagal mengambil izin mendekati tenggat:", error.message);
+    return [];
+  }
+
+  return data ?? [];
+}
+
+/**
+ * Tandai izin sudah diingatkan supaya tidak dikirim ulang.
+ */
+export async function markIzinReminded(id: number): Promise<void> {
+  const { error } = await supabase
+    .from("izin")
+    .update({ reminded_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) {
+    console.error(`Gagal menandai reminded_at untuk izin #${id}:`, error.message);
+  }
+}

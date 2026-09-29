@@ -113,7 +113,7 @@ export default function DailyActivitySummary({
         <div>
           <h2 className="text-base font-semibold">Ringkasan Progress Gelara</h2>
           <p className="text-xs text-ink-soft mt-0.5">
-            Tingkat keikutsertaan dihitung berdasarkan aktivitas tercatat yang tidak berstatus A.
+            Tingkat keikutsertaan dihitung berdasarkan kehadiran (aktivitas tanpa status A, S, atau I).
           </p>
         </div>
 
@@ -305,7 +305,11 @@ export default function DailyActivitySummary({
                 <div className="rounded-lg bg-paper p-2.5">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] uppercase font-semibold text-ink-soft">Mingguan</span>
-                    <span className="text-[10px] text-clay font-medium">{row.jumlahAMingguan} A</span>
+                    <span className="text-[10px] text-ink-soft font-medium">
+                      <span className="text-clay font-medium">{row.jumlahAMingguan} A</span>,{" "}
+                      <span className="text-amber-600 dark:text-amber-400 font-medium">{row.jumlahSMingguan || 0} S</span>,{" "}
+                      <span className="text-sky-600 dark:text-sky-400 font-medium">{row.jumlahIMingguan || 0} I</span>
+                    </span>
                   </div>
                   <p className="text-base font-bold text-teal mt-0.5">
                     {row.progressMingguan !== null ? `${row.progressMingguan.toFixed(1)}%` : "—"}
@@ -315,7 +319,11 @@ export default function DailyActivitySummary({
                 <div className="rounded-lg bg-paper p-2.5">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] uppercase font-semibold text-ink-soft">Bulanan</span>
-                    <span className="text-[10px] text-clay font-medium">{row.jumlahABulanan} A</span>
+                    <span className="text-[10px] text-ink-soft font-medium">
+                      <span className="text-clay font-medium">{row.jumlahABulanan} A</span>,{" "}
+                      <span className="text-amber-600 dark:text-amber-400 font-medium">{row.jumlahSBulanan || 0} S</span>,{" "}
+                      <span className="text-sky-600 dark:text-sky-400 font-medium">{row.jumlahIBulanan || 0} I</span>
+                    </span>
                   </div>
                   <p className="text-base font-bold text-teal mt-0.5">
                     {row.progressBulanan !== null ? `${row.progressBulanan.toFixed(1)}%` : "—"}
