@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { formatTanggal, jakartaDateParts } from "@/lib/format";
 import type { IzinRowWithUserJoin, StatusIzin, JenisIzin } from "@/lib/types";
 import { sendNotificationToPengurus, sendNotificationToUser } from "@/services/notification.service";
+import { getDailyActivityData } from "@/services/daily-activity.service";
 
 export async function syncScheduledIzinStatuses(): Promise<void> {
   const now = new Date().toISOString();
@@ -262,7 +263,7 @@ export async function createIzin(
   // Check blacklist status
   const { data: user, error: userError } = await supabase
     .from("users")
-    .select("is_blacklisted, blacklist_reason, blacklist_until")
+    .select("is_blacklisted, blacklist_reason, blacklist_until, name")
     .eq("id", userId)
     .single();
 
@@ -280,6 +281,30 @@ export async function createIzin(
     const reasonText = user?.blacklist_reason ? ` (Alasan: ${user.blacklist_reason})` : "";
     const untilText = user?.blacklist_until ? ` sampai ${formatTanggal(user.blacklist_until)}` : "";
     return { error: `Anda sedang diblacklist${untilText} dan tidak dapat mengajukan izin keluar${reasonText}.` };
+  }
+
+  // Cek blacklist otomatis akhir pekan (Sabtu/Minggu) jika pelanggaran > 10%
+  const outDate = new Date(tanggal_keluar);
+  const outDay = outDate.getDay(); // 0 = Minggu, 6 = Sabtu
+  
+  if (outDay === 0 || outDay === 6) {
+    try {
+      if (user?.name) {
+        const activityData = await getDailyActivityData();
+        const gelara = activityData.gelaraSummaries.find(g => g.namaGelara === user.name);
+        
+        if (gelara && gelara.totalTercatatMingguan > 0) {
+          const persenPelanggaran = (gelara.jumlahAMingguan / gelara.totalTercatatMingguan) * 100;
+          if (persenPelanggaran > 10) {
+            return { 
+              error: `Pengajuan ditolak: Anda tidak dapat mengajukan izin untuk hari Sabtu/Minggu karena tingkat pelanggaran (Alfa) Anda minggu ini mencapai ${persenPelanggaran.toFixed(1)}% (Maksimal 10%).` 
+            };
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error checking daily activity for weekend permission:", err);
+    }
   }
 
   const { data: inserted, error } = await supabase
