@@ -411,11 +411,11 @@ function DailyActivityPengurusView({
         </div>
 
         {/* Filters */}
-        <div className="flex items-center gap-2 self-start md:self-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 self-start md:self-auto w-full md:w-auto mt-2 md:mt-0">
           <select
             value={initialData.selectedMonthId}
             onChange={(e) => handleFilterChange({ monthId: e.target.value, weekId: initialData.selectedWeekId })}
-            className="rounded-lg border border-line bg-paper px-3 py-2 text-xs font-medium outline-none focus:border-teal focus:ring-1 focus:ring-teal"
+            className="w-full sm:w-auto rounded-lg border border-line bg-paper px-3 py-2 text-xs font-medium outline-none focus:border-teal focus:ring-1 focus:ring-teal"
           >
             {initialData.availableMonths.map((m) => (
               <option key={m.id} value={m.id}>{m.label}</option>
@@ -424,7 +424,7 @@ function DailyActivityPengurusView({
           <select
             value={initialData.selectedWeekId}
             onChange={(e) => handleFilterChange({ weekId: e.target.value, monthId: initialData.selectedMonthId })}
-            className="rounded-lg border border-line bg-paper px-3 py-2 text-xs font-medium outline-none focus:border-teal focus:ring-1 focus:ring-teal"
+            className="w-full sm:w-auto rounded-lg border border-line bg-paper px-3 py-2 text-xs font-medium outline-none focus:border-teal focus:ring-1 focus:ring-teal"
           >
             {initialData.weeks.map((w) => (
               <option key={w.id} value={w.id}>{w.label}</option>
@@ -444,41 +444,40 @@ function DailyActivityPengurusView({
           </span>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="rounded-xl border border-line bg-paper-raised p-4 shadow-xs">
-            <p className="text-2xl font-bold text-ink">
-              {initialData.gelaraSummaries.length}
-            </p>
-            <p className="text-xs text-ink-soft mt-1">Total Gelara Tercatat</p>
-          </div>
-
-          <div className="rounded-xl border border-line bg-paper-raised p-4 shadow-xs">
-            <p className="text-2xl font-bold text-teal">
+        <div className="flex flex-row gap-3 sm:gap-4">
+          {/* Main Stat (Big Box, Kiri) */}
+          <div className="w-[45%] md:w-1/3 rounded-xl border border-teal bg-teal-soft/10 p-4 sm:p-6 shadow-sm flex flex-col justify-center items-center text-center">
+            <p className="text-xs sm:text-sm font-semibold text-teal mb-2">Rata-rata Progress</p>
+            <p className="text-4xl sm:text-6xl font-extrabold text-teal tracking-tight">
               {avgWeeklyProgress !== null ? `${avgWeeklyProgress}%` : "—"}
             </p>
-            <p className="text-xs text-ink-soft mt-1">
-              Rata-rata Progress {currentWeek.shortLabel}
-            </p>
+            <p className="text-[10px] sm:text-xs text-teal/70 mt-1">{currentWeek.shortLabel}</p>
           </div>
 
-          <div className="rounded-xl border border-line bg-paper-raised p-4 shadow-xs">
-            <p className="text-2xl font-bold text-clay">{totalWeeklyA}</p>
-            <p className="text-xs text-ink-soft mt-1">
-              Total Alpha A ({currentWeek.shortLabel})
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-line bg-paper-raised p-4 shadow-xs">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-amber-600 dark:text-amber-400">{totalWeeklyS}</span>
-              <span className="text-xs text-ink-soft">S</span>
-              <span className="text-ink-soft">/</span>
-              <span className="text-2xl font-bold text-sky-600 dark:text-sky-400">{totalWeeklyI}</span>
-              <span className="text-xs text-ink-soft">I</span>
+          {/* Secondary Stats (3 Small Boxes, Kanan Bertumpuk Vertikal) */}
+          <div className="w-[55%] md:w-2/3 flex flex-col gap-2 sm:gap-3">
+            <div className="flex-1 rounded-xl border border-line bg-paper-raised p-3 sm:px-5 shadow-xs flex items-center justify-between">
+              <p className="text-[11px] sm:text-sm text-ink-soft font-medium">Total Gelara</p>
+              <p className="text-lg sm:text-2xl font-bold text-ink">
+                {initialData.gelaraSummaries.length}
+              </p>
             </div>
-            <p className="text-xs text-ink-soft mt-1">
-              Sakit (S) & Izin (I) ({currentWeek.shortLabel})
-            </p>
+
+            <div className="flex-1 rounded-xl border border-line bg-paper-raised p-3 sm:px-5 shadow-xs flex items-center justify-between">
+              <p className="text-[11px] sm:text-sm text-ink-soft font-medium">Total Alpha</p>
+              <p className="text-lg sm:text-2xl font-bold text-clay">{totalWeeklyA}</p>
+            </div>
+
+            <div className="flex-1 rounded-xl border border-line bg-paper-raised p-3 sm:px-5 shadow-xs flex items-center justify-between">
+              <p className="text-[11px] sm:text-sm text-ink-soft font-medium">Sakit & Izin</p>
+              <div className="flex items-baseline gap-1 sm:gap-1.5">
+                <span className="text-base sm:text-xl font-bold text-amber-600 dark:text-amber-400">{totalWeeklyS}</span>
+                <span className="text-[10px] sm:text-xs text-ink-soft">S</span>
+                <span className="text-ink-soft text-[10px] sm:text-xs mx-0.5">/</span>
+                <span className="text-base sm:text-xl font-bold text-sky-600 dark:text-sky-400">{totalWeeklyI}</span>
+                <span className="text-[10px] sm:text-xs text-ink-soft">I</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
