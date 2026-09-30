@@ -18,7 +18,7 @@ export async function loginAction(
       redirectTo: "/beranda",
     });
     return {};
-  } catch (error) {
+    } catch (error: any) {
     if (error instanceof AuthError) {
       switch (error.type) {
         case "CredentialsSignin":
@@ -27,7 +27,13 @@ export async function loginAction(
           return { error: "Terjadi kesalahan saat masuk. Coba lagi." };
       }
     }
-    // NextAuth throws a redirect internally on success — let it propagate.
-    throw error;
+    
+    // Next.js redirect errors harus di-throw ulang agar proses redirect berjalan
+    if (error?.digest?.startsWith("NEXT_REDIRECT")) {
+      throw error;
+    }
+
+    // Tangkap error lainnya (seperti 429 Too Many Requests dari Middleware)
+    return { error: "Terlalu banyak percobaan login. Silakan tunggu 1 menit lalu coba lagi." };
   }
 }
