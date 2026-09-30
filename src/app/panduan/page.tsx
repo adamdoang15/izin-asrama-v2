@@ -33,27 +33,27 @@ export default function PanduanPage() {
 
   const jenisIzin = [
     {
-      nama: "Harian",
+      nama: "",
       badge: "HARIAN",
       desc: "Izin keluar untuk keperluan pribadi atau kegiatan tertentu yang sifatnya bukan rekreasi dan kembali pada hari yang sama (misal: beli perlengkapan, jajan, laundry, potong rambut dll) tanpa menginap. Dapat diajukan dan disetujui oleh semua mentor.",
     },
     {
-      nama: "Menginap",
+      nama: "",
       badge: "MENGINAP",
       desc: "Izin pulang ke rumah atau menginap di luar asrama untuk hari libur resmi asrama atas pengajuan dari orang tua. Hanya bisa diajukan kepada Penanggung Jawab Kegelaraan atas persetujuan Ketua LKP.",
     },
     {
-      nama: "Rekreasi",
+      nama: "",
       badge: "REKREASI",
       desc: "Izin untuk kegiatan hiburan atau rekreasi (misal: nonton bioskop, main ke cafe, main futsal, berenang atau kegiatan refreshing lainnya). Hanya bisa diajukan maksimal 1 kali dalam satu bulan, diajukan kepada Penanggung Jawab Kegelaraan atas persetujuan Ketua LKP.",
     },
     {
-      nama: "Keluarga",
+      nama: "",
       badge: "KELUARGA",
       desc: "Izin khusus untuk acara atau urusan penting bersama keluarga tanpa menginap. Hanya bisa diajukan kepada Penanggung Jawab Kegelaraan atas persetujuan Ketua LKP.",
     },
     {
-      nama: "Darurat",
+      nama: "",
       badge: "DARURAT",
       desc: "Izin mendadak untuk keperluan medis atau duka cita keluarga yang memerlukan penanganan cepat. Diajukan kepada Penanggung Jawab Kegelaraan atas persetujuan Ketua LKP.",
     },
