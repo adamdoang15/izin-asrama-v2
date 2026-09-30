@@ -2,7 +2,7 @@ import Link from "next/link";
 import { auth, signOut } from "@/lib/auth";
 import ThemeToggle from "./ThemeToggle";
 
-export default async function PublicNav() {
+export default async function PublicNav({ hideLoginButton = false }: { hideLoginButton?: boolean }) {
   const session = await auth();
 
   return (
@@ -53,12 +53,14 @@ export default async function PublicNav() {
         ) : (
           <div className="flex items-center gap-5">
             <ThemeToggle />
-            <Link
-              href="/login"
-              className="text-sm font-medium text-paper-raised bg-teal px-4 py-2 rounded-md hover:opacity-90 transition-opacity"
-            >
-              Masuk
-            </Link>
+            {!hideLoginButton && (
+              <Link
+                href="/login"
+                className="text-sm font-medium text-paper-raised bg-teal px-4 py-2 rounded-md hover:opacity-90 transition-opacity"
+              >
+                Masuk
+              </Link>
+            )}
           </div>
         )}
       </div>

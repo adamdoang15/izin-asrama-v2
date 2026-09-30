@@ -14,19 +14,16 @@ export default function LoginPage() {
 
   return (
     <main className="flex-1 flex items-center justify-center px-6 py-16">
-      <div className="w-full max-w-sm">
-        <div className="mb-8">
-          <Link
-            href="/"
-            className="text-xl font-semibold tracking-tight hover:opacity-80 transition-opacity"
-          >
-            Izin Asrama
-          </Link>
-          <p className="mt-1.5 text-sm text-ink-soft leading-relaxed">
-            Masuk untuk mengajukan atau meninjau izin keluar lingkungan
-            asrama.
-          </p>
-        </div>
+        <div className="w-full max-w-sm">
+          <div className="mb-8">
+            <h1 className="text-xl font-semibold tracking-tight text-ink">
+              Masuk ke Akun
+            </h1>
+            <p className="mt-1.5 text-sm text-ink-soft leading-relaxed">
+              Masuk untuk mengajukan atau meninjau izin keluar lingkungan
+              asrama.
+            </p>
+          </div>
 
         <form action={formAction} className="space-y-4">
           <div className="space-y-1.5">
