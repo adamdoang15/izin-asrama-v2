@@ -254,7 +254,7 @@ function DailyActivityGelaraView({
         </div>
       )}
 
-      {/* Daftar Ketidakhadiran (A, S, I) Milik Gelara Ini */}
+      {/*  (A, S, I) Milik Gelara Ini */}
       <section className="rounded-xl border border-line bg-paper-raised p-6 shadow-xs space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">

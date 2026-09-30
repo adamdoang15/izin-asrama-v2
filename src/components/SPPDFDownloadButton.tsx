@@ -73,7 +73,7 @@ export default function SPPDFDownloadButton({
 
   if (showForm) {
     return (
-      <div className="flex items-center gap-1.5 bg-paper p-1.5 rounded-lg border border-line shadow-sm text-sm animate-in fade-in slide-in-from-right-4 duration-200">
+      <div className="flex flex-wrap items-center gap-1.5 bg-paper p-1.5 rounded-lg border border-line shadow-sm text-sm animate-in fade-in slide-in-from-right-4 duration-200">
         <input 
           type="text" 
           value={formData.nomor} 

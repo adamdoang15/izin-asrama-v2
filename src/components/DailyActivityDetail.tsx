@@ -143,8 +143,8 @@ export default function DailyActivityDetail({
       >
         {/* Modal Header */}
         <div className="flex items-start justify-between border-b border-line px-5 sm:px-6 py-4">
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full gap-4 sm:gap-0">
+            <div className="flex items-center gap-3 pr-2">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-teal-soft text-base font-semibold text-teal">
                 {initial}
               </span>
@@ -156,7 +156,7 @@ export default function DailyActivityDetail({
               </div>
             </div>
             {summary.progressBulanan !== null && summary.progressBulanan < 85 && (
-              <div className="mr-4">
+              <div className="sm:mr-4">
                 <SPPDFDownloadButton
                   monthLabel={monthLabel}
                   year={year}
@@ -395,7 +395,7 @@ export default function DailyActivityDetail({
             {currentList.length === 0 ? (
               <div className="rounded-xl border border-line bg-paper p-6 text-center">
                 <p className="text-sm font-medium text-sage">
-                  {isPelanggaran ? "Alhamdulillah, tidak ada catatan Pelanggaran" : ", tidak ada catatan Ketidakhadiran"}
+                  {isPelanggaran ? "Alhamdulillah, tidak ada catatan Pelanggaran" : "Alhamdulillah, tidak ada catatan Ketidakhadiran"}
                 </p>
                 <p className="text-xs text-ink-soft mt-1">
                   Seluruh kegiatan tercatat telah diikuti dengan baik pada periode {isWeekly ? currentWeek.shortLabel : "bulan ini"}.
