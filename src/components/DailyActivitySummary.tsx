@@ -267,9 +267,9 @@ export default function DailyActivitySummary({
       </div>
 
       {/* Mobile Card List */}
-      <div className="md:hidden space-y-3">
+      <div className="md:hidden space-y-4">
         {filteredSummaries.length === 0 ? (
-          <div className="rounded-xl border border-line bg-paper-raised p-6 text-center text-sm text-ink-soft">
+          <div className="rounded-2xl border border-dashed border-line/80 bg-paper-raised/30 dark:bg-ink/5 p-8 text-center text-sm font-bold text-ink">
             Tidak ada data gelara yang sesuai.
           </div>
         ) : (
@@ -277,16 +277,16 @@ export default function DailyActivitySummary({
             <div
               key={row.namaGelara}
               onClick={() => onSelectGelara(row)}
-              className="rounded-xl border border-line bg-paper-raised p-4 shadow-xs space-y-3 cursor-pointer hover:border-teal transition-colors"
+              className="rounded-2xl border border-line/50 bg-white/40 dark:bg-ink/10 p-5 shadow-sm space-y-4 cursor-pointer hover:scale-[1.01] hover:shadow-md transition-all backdrop-blur-sm"
             >
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-teal-soft text-xs font-semibold text-teal">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-teal-soft/80 border border-teal/20 text-sm font-bold text-teal shadow-sm">
                     {row.namaGelara.trim()?.[0]?.toUpperCase()}
                   </span>
                   <div>
-                    <h3 className="text-sm font-semibold leading-tight">{row.namaGelara}</h3>
-                    <p className="text-[11px] text-ink-soft mt-0.5">#{idx + 1}</p>
+                    <h3 className="text-sm font-bold text-ink leading-tight">{row.namaGelara}</h3>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mt-1">Peringkat #{idx + 1}</p>
                   </div>
                 </div>
                 <button
@@ -295,40 +295,60 @@ export default function DailyActivitySummary({
                     e.stopPropagation();
                     onSelectGelara(row);
                   }}
-                  className="text-xs font-medium text-teal hover:underline"
+                  className="rounded-lg bg-ink px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-paper-raised active:scale-95 transition-transform"
                 >
-                  Detail →
+                  Detail
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-line">
-                <div className="rounded-lg bg-paper p-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase font-semibold text-ink-soft">Mingguan</span>
-                    <span className="text-[10px] text-ink-soft font-medium">
-                      <span className="text-clay font-medium">{row.jumlahAMingguan} A</span>,{" "}
-                      <span className="text-amber-600 dark:text-amber-400 font-medium">{row.jumlahSMingguan || 0} S</span>,{" "}
-                      <span className="text-sky-600 dark:text-sky-400 font-medium">{row.jumlahIMingguan || 0} I</span>
+              <div className="grid grid-cols-2 gap-3 pt-4 border-t border-line/50">
+                
+                {/* Mingguan */}
+                <div className="rounded-xl border border-line/50 bg-paper-raised/60 dark:bg-ink/10 p-3 flex flex-col justify-between shadow-sm">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mb-2">Mingguan</p>
+                  
+                  <div className="mb-3">
+                    <span className="text-3xl font-black text-teal tracking-tighter">
+                      {row.progressMingguan !== null ? `${row.progressMingguan.toFixed(1)}%` : "—"}
                     </span>
                   </div>
-                  <p className="text-base font-bold text-teal mt-0.5">
-                    {row.progressMingguan !== null ? `${row.progressMingguan.toFixed(1)}%` : "—"}
-                  </p>
+
+                  <div className="flex flex-wrap gap-1.5 mt-auto">
+                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold ${row.jumlahAMingguan > 0 ? "bg-clay-soft/80 text-clay" : "bg-paper text-ink-soft border border-line/50"}`}>
+                      {row.jumlahAMingguan} A
+                    </span>
+                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold ${row.jumlahSMingguan ? "bg-amber-soft/80 text-amber-700 dark:text-amber-400" : "bg-paper text-ink-soft border border-line/50"}`}>
+                      {row.jumlahSMingguan || 0} S
+                    </span>
+                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold ${row.jumlahIMingguan ? "bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400" : "bg-paper text-ink-soft border border-line/50"}`}>
+                      {row.jumlahIMingguan || 0} I
+                    </span>
+                  </div>
                 </div>
 
-                <div className="rounded-lg bg-paper p-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase font-semibold text-ink-soft">Bulanan</span>
-                    <span className="text-[10px] text-ink-soft font-medium">
-                      <span className="text-clay font-medium">{row.jumlahABulanan} A</span>,{" "}
-                      <span className="text-amber-600 dark:text-amber-400 font-medium">{row.jumlahSBulanan || 0} S</span>,{" "}
-                      <span className="text-sky-600 dark:text-sky-400 font-medium">{row.jumlahIBulanan || 0} I</span>
+                {/* Bulanan */}
+                <div className="rounded-xl border border-line/50 bg-paper-raised/60 dark:bg-ink/10 p-3 flex flex-col justify-between shadow-sm">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mb-2">Bulanan</p>
+                  
+                  <div className="mb-3">
+                    <span className="text-3xl font-black text-teal tracking-tighter">
+                      {row.progressBulanan !== null ? `${row.progressBulanan.toFixed(1)}%` : "—"}
                     </span>
                   </div>
-                  <p className="text-base font-bold text-teal mt-0.5">
-                    {row.progressBulanan !== null ? `${row.progressBulanan.toFixed(1)}%` : "—"}
-                  </p>
+
+                  <div className="flex flex-wrap gap-1.5 mt-auto">
+                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold ${row.jumlahABulanan > 0 ? "bg-clay-soft/80 text-clay" : "bg-paper text-ink-soft border border-line/50"}`}>
+                      {row.jumlahABulanan} A
+                    </span>
+                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold ${row.jumlahSBulanan ? "bg-amber-soft/80 text-amber-700 dark:text-amber-400" : "bg-paper text-ink-soft border border-line/50"}`}>
+                      {row.jumlahSBulanan || 0} S
+                    </span>
+                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold ${row.jumlahIBulanan ? "bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400" : "bg-paper text-ink-soft border border-line/50"}`}>
+                      {row.jumlahIBulanan || 0} I
+                    </span>
+                  </div>
                 </div>
+
               </div>
             </div>
           ))

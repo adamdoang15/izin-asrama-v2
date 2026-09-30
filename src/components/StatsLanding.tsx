@@ -77,10 +77,12 @@ function formatMonth(key: string) {
 
 function StatCard({ label, value, note }: { label: string; value: number; note?: string }) {
   return (
-    <div className="glass-panel p-5">
-      <p className="text-sm text-ink-soft">{label}</p>
-      <p className="mt-2 text-3xl font-semibold tracking-tight">{value.toLocaleString("id-ID")}</p>
-      {note && <p className="mt-1 text-xs text-ink-soft">{note}</p>}
+    <div className="glass-panel p-6 flex flex-col justify-between">
+      <p className="text-xs font-semibold uppercase tracking-widest text-ink-soft">{label}</p>
+      <div className="mt-6">
+        <p className="text-4xl font-bold tracking-tighter">{value.toLocaleString("id-ID")}</p>
+        {note && <p className="mt-2 text-xs text-ink-soft">{note}</p>}
+      </div>
     </div>
   );
 }
@@ -88,23 +90,21 @@ function StatCard({ label, value, note }: { label: string; value: number; note?:
 function Chart({ buckets }: { buckets: Bucket[] }) {
   const max = Math.max(...buckets.map((b) => b.count), 1);
   return (
-    <div className="glass-panel p-5">
-      <div className="mb-5 flex items-end justify-between gap-4">
-        <div>
-          <h2 className="font-semibold">Tren pengajuan izin</h2>
-          <p className="mt-1 text-xs text-ink-soft">Jumlah pengajuan berdasarkan waktu keluar.</p>
-        </div>
+    <div className="glass-panel p-8">
+      <div className="mb-8 md:mb-12">
+        <h2 className="text-xl font-bold tracking-tight">Tren Pengajuan</h2>
+        <p className="mt-1 text-sm text-ink-soft">Distribusi volume izin berdasarkan periode berjalan.</p>
       </div>
-      <div className="flex h-56 items-end gap-2 overflow-x-auto pb-7">
+      <div className="flex h-64 items-end gap-3 overflow-x-auto pb-4 scrollbar-none">
         {buckets.map((bucket) => {
           const height = Math.max((bucket.count / max) * 100, bucket.count ? 8 : 2);
           return (
-            <div key={bucket.label} className="flex min-w-[38px] flex-1 flex-col items-center justify-end gap-2">
-              <span className="text-xs font-medium">{bucket.count}</span>
-              <div className="flex h-36 w-full items-end rounded-lg bg-teal-soft">
-                <div className="w-full rounded-lg bg-teal transition-all" style={{ height: `${height}%` }} />
+            <div key={bucket.label} className="group flex min-w-[48px] flex-1 flex-col items-center justify-end gap-3">
+              <span className="text-sm font-semibold opacity-0 transition-opacity group-hover:opacity-100">{bucket.count}</span>
+              <div className="flex h-44 w-full items-end rounded-t-sm bg-teal-soft/40 backdrop-blur-sm">
+                <div className="w-full rounded-t-sm bg-teal/80 transition-all duration-500 ease-out hover:bg-teal" style={{ height: `${height}%` }} />
               </div>
-              <span className="max-w-[54px] truncate text-[10px] text-ink-soft" title={bucket.label}>{bucket.label}</span>
+              <span className="max-w-[60px] truncate text-xs font-medium text-ink-soft" title={bucket.label}>{bucket.label}</span>
             </div>
           );
         })}
@@ -212,67 +212,92 @@ export default function StatsLanding({ rows }: Props) {
   }, [period, rows]);
 
   return (
-    <main className="flex-1">
-      <section className="glass-panel !border-l-0 !border-r-0 !border-t-0 !rounded-none">
-        <div className="mx-auto max-w-6xl px-6 pb-12 pt-8 md:pb-16 md:pt-12">
-          <div className="flex flex-col gap-7 md:flex-row md:items-end md:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-sm font-medium text-teal">Sistem Perizinan Asrama</p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-tight md:text-5xl">Aktivitas izin asrama TA 2026/2027.</h1>
-              <p className="mt-4 max-w-xl text-sm leading-6 text-ink-soft md:text-base">Halaman publik untuk melihat statistik pengajuan izin harian, mingguan, bulanan, dan tahunan tanpa menampilkan data pribadi gelara.</p>
-            </div>
-          </div>
+    <main className="flex-1 relative">
+      {/* Bold Hero Section */}
+      <section className="mx-auto max-w-6xl px-6 pb-12 pt-20 md:pb-20 md:pt-32 relative z-10">
+        <div className="max-w-4xl">
+          <h1 className="text-5xl font-bold tracking-tighter md:text-7xl lg:text-8xl text-ink">
+            Aktivitas Izin Asrama.
+          </h1>
+          <p className="mt-8 max-w-2xl text-lg font-medium leading-relaxed text-ink-soft md:text-2xl">
+            Transparansi perizinan gelara secara real-time. Memantau statistik kepulangan, keterlambatan, dan mobilitas harian asrama.
+          </p>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 py-8 md:py-10">
-        <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div><h2 className="text-lg font-semibold">Statistik izin</h2><p className="mt-1 text-sm text-ink-soft">Pilih rentang waktu yang ingin dipantau.</p></div>
-          <div className="inline-flex w-fit glass-panel !rounded-xl p-1">
+      <section className="mx-auto max-w-6xl px-6 pb-20 relative z-10">
+        <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div className="glass-panel !rounded-2xl flex w-full max-w-full overflow-x-auto scrollbar-none md:w-fit md:inline-flex p-1.5 shadow-sm">
             {(["HARIAN", "MINGGUAN", "BULANAN", "TAHUNAN"] as Period[]).map((item) => (
-              <button key={item} type="button" onClick={() => setPeriod(item)} className={`rounded-lg px-3 py-2 text-xs font-medium transition-colors ${period === item ? "bg-teal text-paper-raised" : "text-ink-soft hover:text-ink"}`}>
-                {item[0] + item.slice(1).toLowerCase()}
+              <button 
+                key={item} 
+                type="button" 
+                onClick={() => setPeriod(item)} 
+                className={`shrink-0 flex-1 md:flex-none rounded-xl px-5 py-2.5 text-xs font-bold tracking-wide uppercase transition-all duration-300 ${period === item ? "bg-ink text-paper-raised shadow-md" : "text-ink-soft hover:text-ink hover:bg-white/40"}`}
+              >
+                {item}
               </button>
             ))}
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 [&>:last-child]:col-span-2 sm:[&>:last-child]:col-span-1 md:[&>:last-child]:col-span-1">
-          <StatCard label="Total izin" value={data.total} />
-          <StatCard label="Disetujui" value={data.approved} />
-          <StatCard label="Sedang keluar" value={data.active} />
-          <StatCard label="Sudah kembali" value={data.returned} />
-          <StatCard label="Ditolak" value={data.rejected} />
+        {/* Structural Layout instead of identical cards */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+          {/* Main Stat */}
+          <div className="glass-panel col-span-1 md:col-span-5 p-8 md:p-10 flex flex-col justify-between">
+            <div>
+              <p className="text-sm font-semibold tracking-widest uppercase text-teal">Total Pengajuan</p>
+              <h2 className="mt-4 text-7xl md:text-8xl font-bold tracking-tighter">{data.total.toLocaleString("id-ID")}</h2>
+            </div>
+            <p className="mt-16 text-sm font-medium text-ink-soft">Jumlah seluruh perizinan yang tercatat dalam sistem pada periode yang dipilih.</p>
+          </div>
+          
+          {/* Minor Stats Grid */}
+          <div className="col-span-1 md:col-span-7 grid grid-cols-2 gap-5">
+            <StatCard label="Disetujui" value={data.approved} />
+            <StatCard label="Sedang Keluar" value={data.active} />
+            <StatCard label="Sudah Kembali" value={data.returned} />
+            <StatCard label="Ditolak" value={data.rejected} />
+          </div>
         </div>
 
         <div className="mt-5"><Chart buckets={data.buckets} /></div>
 
-        <div className="mt-5 glass-panel p-5">
-          <h2 className="font-semibold">Indikator kepulangan</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl bg-sage-soft p-4"><p className="text-xs text-ink-soft">Tepat waktu</p><p className="mt-1 text-xl font-semibold text-sage">{Math.max(data.returned - data.late, 0).toLocaleString("id-ID")}</p></div>
-            <div className="rounded-xl bg-clay-soft p-4"><p className="text-xs text-ink-soft">Terlambat</p><p className="mt-1 text-xl font-semibold text-clay">{data.late.toLocaleString("id-ID")}</p></div>
+        <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="glass-panel p-8 flex flex-col justify-center">
+            <h2 className="text-xl font-bold tracking-tight">Kepatuhan Kepulangan</h2>
+            <div className="mt-8 flex items-baseline gap-6">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-ink-soft">Tepat Waktu</p>
+                <p className="mt-2 text-4xl font-bold text-sage">{Math.max(data.returned - data.late, 0).toLocaleString("id-ID")}</p>
+              </div>
+              <div className="h-12 w-px bg-line/50"></div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-ink-soft">Terlambat</p>
+                <p className="mt-2 text-4xl font-bold text-clay">{data.late.toLocaleString("id-ID")}</p>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="mt-5 glass-panel p-5">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="glass-panel p-8 flex flex-col justify-between items-start">
             <div>
-              <h2 className="font-semibold text-ink">Alur & SOP Perizinan Asrama</h2>
-              <p className="mt-1 text-xs text-ink-soft">
-                Pelajari alur pengajuan izin, kategori izin, dan ketentuan validasi radius kepulangan gelara.
+              <h2 className="text-xl font-bold tracking-tight text-ink">Standar Operasional (SOP)</h2>
+              <p className="mt-3 text-sm leading-relaxed text-ink-soft">
+                Pelajari alur pengajuan izin, kategori izin yang diperbolehkan, serta ketentuan validasi radius kepulangan bagi seluruh gelara.
               </p>
             </div>
             <Link
               href="/panduan"
-              className="inline-flex shrink-0 items-center justify-center rounded-lg bg-teal-soft px-4 py-2 text-xs font-semibold text-teal transition-colors hover:bg-teal hover:text-paper-raised"
+              className="mt-8 inline-flex items-center justify-center rounded-xl bg-ink px-6 py-3 text-sm font-semibold text-paper-raised transition-all hover:bg-ink-soft hover:shadow-lg hover:-translate-y-0.5"
             >
-              Lihat Panduan SOP →
+              Baca Panduan Lengkap →
             </Link>
           </div>
         </div>
 
-        <p className="mt-6 text-center text-xs text-ink-soft">Statistik diperbarui saat halaman dimuat. Data pribadi gelara tidak ditampilkan pada halaman publik.</p>
+        <p className="mt-12 text-center text-xs font-medium text-ink-soft opacity-70">
+          Statistik diperbarui secara otomatis. Demi keamanan, data pribadi gelara tidak ditampilkan secara publik.
+        </p>
       </section>
     </main>
   );

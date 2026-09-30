@@ -108,6 +108,7 @@ export async function syncBlacklistStatus(): Promise<void> {
     .lt("blacklist_until", todayStr);
 
   if (error) {
+    // eslint-disable-next-line no-console
     console.error("Gagal menyinkronkan status blacklist otomatis:", error.message);
   }
 }
