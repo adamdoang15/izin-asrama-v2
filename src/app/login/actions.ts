@@ -31,8 +31,8 @@ export async function loginAction(
   formData: FormData
 ): Promise<LoginState> {
   if (ratelimit) {
-    // Gunakan headers() dari next/headers untuk mendapatkan IP di Server Action
-    const ip = headers().get("x-forwarded-for") || "anonymous";
+    // Gunakan await headers() karena di Next.js terbaru ia mengembalikan Promise
+    const ip = (await headers()).get("x-forwarded-for") || "anonymous";
     const { success } = await ratelimit.limit(`ratelimit_login_${ip}`);
     if (!success) {
       return { error: "Terlalu banyak percobaan login. Silakan tunggu 1 menit lalu coba lagi." };
