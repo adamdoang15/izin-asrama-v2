@@ -2,6 +2,25 @@
 
 import { signIn } from "@/lib/auth";
 import { AuthError } from "next-auth";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+import { headers } from "next/headers";
+
+const redis = (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
+  ? new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    })
+  : null;
+
+const ratelimit = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(5, "1 m"),
+      analytics: true,
+      prefix: "@upstash/ratelimit",
+    })
+  : null;
 
 export type LoginState = {
   error?: string;
@@ -11,6 +30,15 @@ export async function loginAction(
   _prevState: LoginState,
   formData: FormData
 ): Promise<LoginState> {
+  if (ratelimit) {
+    // Gunakan headers() dari next/headers untuk mendapatkan IP di Server Action
+    const ip = headers().get("x-forwarded-for") || "anonymous";
+    const { success } = await ratelimit.limit(`ratelimit_login_${ip}`);
+    if (!success) {
+      return { error: "Terlalu banyak percobaan login. Silakan tunggu 1 menit lalu coba lagi." };
+    }
+  }
+
   try {
     await signIn("credentials", {
       username: formData.get("username"),
