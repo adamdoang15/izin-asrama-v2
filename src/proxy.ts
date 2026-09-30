@@ -26,7 +26,8 @@ export default auth(async (req) => {
   const isLoginApi = req.nextUrl.pathname === "/api/auth/callback/credentials" && req.method === "POST";
   
   if (isLoginApi && ratelimit) {
-    const ip = req.ip || req.headers.get("x-forwarded-for") || "anonymous";
+    // Mengambil IP dari header untuk menghindari error TypeScript pada NextAuthRequest
+    const ip = req.headers.get("x-forwarded-for") || "anonymous";
     const { success, pending, limit, reset, remaining } = await ratelimit.limit(`ratelimit_login_${ip}`);
     
     if (!success) {
