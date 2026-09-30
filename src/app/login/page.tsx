@@ -13,23 +13,25 @@ export default function LoginPage() {
   );
 
   return (
-    <main className="flex-1 flex items-center justify-center px-6 py-16">
-        <div className="w-full max-w-sm">
-          <div className="mb-8">
-            <h1 className="text-xl font-semibold tracking-tight text-ink">
-              Masuk ke Akun
-            </h1>
-            <p className="mt-1.5 text-sm text-ink-soft leading-relaxed">
-              Masuk untuk mengajukan atau meninjau izin keluar lingkungan
-              asrama.
-            </p>
-          </div>
+    <main className="flex-1 flex items-center justify-center px-6 py-16 relative z-10 min-h-[85vh]">
+      <div className="w-full max-w-md glass-panel p-10 md:p-14 relative overflow-hidden shadow-xl">
+        {/* Subtle blur decoration inside the glass panel - adjusted for light mode contrast */}
+        <div className="absolute -top-16 -right-16 w-48 h-48 bg-teal/10 dark:bg-teal-soft/20 rounded-full blur-2xl pointer-events-none"></div>
+        
+        <div className="mb-10 relative z-10">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tighter text-ink">
+            Masuk.
+          </h1>
+          <p className="mt-3 text-sm font-medium text-ink-soft leading-relaxed max-w-[280px]">
+            Otentikasi akses untuk mengelola atau mengajukan perizinan asrama.
+          </p>
+        </div>
 
-        <form action={formAction} className="space-y-4">
-          <div className="space-y-1.5">
+        <form action={formAction} className="space-y-6 relative z-10">
+          <div className="space-y-2">
             <label
               htmlFor="username"
-              className="block text-sm font-medium text-ink"
+              className="block text-[10px] font-bold uppercase tracking-widest text-ink-soft"
             >
               Username
             </label>
@@ -39,15 +41,15 @@ export default function LoginPage() {
               type="text"
               autoComplete="username"
               required
-              className="w-full rounded-md border border-line bg-paper-raised px-3 py-2 text-sm outline-none focus:border-teal focus:ring-1 focus:ring-teal transition-colors"
-              placeholder="Huruf kecil, tanpa spasi"
+              className="w-full rounded-xl border border-ink/20 dark:border-line bg-paper-raised dark:bg-ink/10 px-4 py-3.5 text-sm font-medium text-ink outline-none focus:border-ink dark:focus:border-teal focus:ring-1 focus:ring-ink dark:focus:ring-teal/50 transition-all placeholder:text-ink-soft/50"
+              placeholder="id_pengguna"
             />
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-ink"
+              className="block text-[10px] font-bold uppercase tracking-widest text-ink-soft"
             >
               Kata sandi
             </label>
@@ -57,32 +59,36 @@ export default function LoginPage() {
               type="password"
               autoComplete="current-password"
               required
-              className="w-full rounded-md border border-line bg-paper-raised px-3 py-2 text-sm outline-none focus:border-teal focus:ring-1 focus:ring-teal transition-colors"
+              className="w-full rounded-xl border border-ink/20 dark:border-line bg-paper-raised dark:bg-ink/10 px-4 py-3.5 text-sm font-medium text-ink outline-none focus:border-ink dark:focus:border-teal focus:ring-1 focus:ring-ink dark:focus:ring-teal/50 transition-all placeholder:text-ink-soft/50"
               placeholder="••••••••"
             />
           </div>
 
           {state.error && (
-            <p className="text-sm text-clay" role="alert">
-              {state.error}
-            </p>
+            <div className="bg-clay-soft/80 border border-clay/30 rounded-lg p-3 backdrop-blur-sm animate-in fade-in zoom-in-95 duration-200">
+              <p className="text-xs font-bold tracking-wide text-clay text-center" role="alert">
+                {state.error}
+              </p>
+            </div>
           )}
 
           <button
             type="submit"
             disabled={pending}
-            className="w-full rounded-md bg-teal px-4 py-2.5 text-sm font-medium text-paper-raised hover:opacity-90 disabled:opacity-60 transition-opacity"
+            className="w-full rounded-xl bg-ink px-4 py-3.5 text-sm font-bold tracking-wide text-paper-raised hover:bg-ink-soft disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg active:scale-[0.98]"
           >
-            {pending ? "Memproses..." : "Masuk"}
+            {pending ? "Memverifikasi..." : "Lanjutkan"}
           </button>
         </form>
 
-        <Link
-          href="/"
-          className="mt-6 inline-block text-sm text-ink-soft hover:text-ink transition-colors"
-        >
-          ← Kembali ke beranda
-        </Link>
+        <div className="mt-10 pt-6 border-t border-line/50 text-center relative z-10">
+          <Link
+            href="/"
+            className="inline-block text-[10px] font-bold uppercase tracking-widest text-ink-soft hover:text-ink transition-colors"
+          >
+            ← Kembali ke Statistik Publik
+          </Link>
+        </div>
       </div>
     </main>
   );

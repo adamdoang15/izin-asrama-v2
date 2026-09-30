@@ -85,11 +85,11 @@ function DailyActivityGelaraView({
 
   if (!mySummary) {
     return (
-      <main className="flex-1 max-w-3xl mx-auto w-full px-6 py-8 space-y-6">
-        <div className="rounded-xl border border-line bg-paper-raised p-8 text-center">
-          <p className="text-base font-semibold">Data Aktivitas Belum Ditemukan</p>
-          <p className="text-xs text-ink-soft mt-1">
-            Data harian gelara atas nama {userName} belum tercatat pada periode ini.
+      <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-12 space-y-6 relative z-10">
+        <div className="glass-panel p-12 text-center flex flex-col items-center justify-center">
+          <p className="text-xl font-bold tracking-tight">Data Aktivitas Belum Ditemukan</p>
+          <p className="text-sm text-ink-soft mt-3 max-w-md">
+            Data harian gelara atas nama <span className="font-bold text-ink">{userName}</span> belum tercatat pada periode ini.
           </p>
         </div>
       </main>
@@ -114,125 +114,23 @@ function DailyActivityGelaraView({
       : null;
 
   return (
-    <main className="flex-1 max-w-3xl mx-auto w-full px-6 py-8 space-y-6">
-      {/* Header Gelara */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-teal-soft text-lg font-bold text-teal">
-            {initial}
-          </span>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-ink">
-                Daily Activity
-              </h1>
-              <span className="inline-flex items-center rounded-full bg-teal-soft px-2.5 py-0.5 text-xs font-semibold text-teal">
-                {initialData.month.label}
-              </span>
-            </div>
-            <p className="text-sm font-medium text-ink-soft mt-0.5">
-              {mySummary.namaGelara}
-            </p>
-          </div>
+    <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-12 md:py-20 space-y-10 md:space-y-12 relative z-10">
+      <div className="max-w-3xl flex flex-col items-start gap-6">
+        <div>
+          <h1 className="text-5xl md:text-7xl font-bold tracking-tighter text-ink leading-tight">
+            Daily Activity.
+          </h1>
+          <p className="mt-4 md:mt-6 text-lg font-medium text-ink-soft md:text-xl leading-relaxed">
+            Rapor pelanggaran harian atas nama <span className="font-bold text-ink">{mySummary.namaGelara}</span> untuk periode bulan <span className="text-teal font-bold">{initialData.month.label}</span>.
+          </p>
         </div>
       </div>
 
-      {/* Progress Cards: Persentase Pelanggaran Mingguan & Bulanan Gelara */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Card Mingguan */}
-        <div
-          onClick={() => setPeriodTab("mingguan")}
-          className={`cursor-pointer rounded-xl border p-5 transition-all shadow-xs ${periodTab === "mingguan"
-            ? "border-teal bg-paper-raised ring-2 ring-teal"
-            : "border-line bg-paper-raised hover:border-ink-soft/40"
-            }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-ink-soft">
-              Pelanggaran Minggu Ini
-            </span>
-            <span className="text-xs text-teal font-medium">
-              {currentWeek.shortLabel}
-            </span>
-          </div>
-
-          <div className="mt-3 flex items-baseline gap-3">
-            <span
-              className={`text-3xl font-extrabold ${(persenAlphaMingguan ?? 0) > 0 ? "text-clay" : "text-sage"
-                }`}
-            >
-              {persenAlphaMingguan !== null ? `${persenAlphaMingguan.toFixed(1)}%` : "—"}
-            </span>
-            <span
-              className={`text-xs font-semibold ${(persenAlphaMingguan ?? 0) > 0 ? "text-clay" : "text-sage"
-                }`}
-            >
-              {(persenAlphaMingguan ?? 0) > 0
-                ? "Pelanggaran di minggu ini"
-                : "Nol pelanggaran (0.0%)"}
-            </span>
-          </div>
-
-          <div className="mt-3 pt-3 border-t border-line/60 flex items-center justify-between text-[11px] text-ink-soft">
-            <span>
-              <span className="font-medium text-clay">{mySummary.jumlahAMingguan} A</span>, <span className="font-medium text-amber-600 dark:text-amber-400">{mySummary.jumlahSMingguan || 0} S</span>, <span className="font-medium text-sky-600 dark:text-sky-400">{mySummary.jumlahIMingguan || 0} I</span> • {totalTidakHadirMingguan} tidak hadir dari {mySummary.totalTercatatMingguan} kegiatan
-            </span>
-            <span className="font-medium text-teal">
-              {periodTab === "mingguan" ? "● Aktif" : "Klik untuk pilih"}
-            </span>
-          </div>
-        </div>
-
-        {/* Card Bulanan */}
-        <div
-          onClick={() => setPeriodTab("bulanan")}
-          className={`cursor-pointer rounded-xl border p-5 transition-all shadow-xs ${periodTab === "bulanan"
-            ? "border-teal bg-paper-raised ring-2 ring-teal"
-            : "border-line bg-paper-raised hover:border-ink-soft/40"
-            }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-ink-soft">
-              Pelanggaran Bulan Ini
-            </span>
-            <span className="text-xs text-teal font-medium">
-              {initialData.month.label}
-            </span>
-          </div>
-
-          <div className="mt-3 flex items-baseline gap-3">
-            <span
-              className={`text-3xl font-extrabold ${(persenAlphaBulanan ?? 0) > 0 ? "text-clay" : "text-sage"
-                }`}
-            >
-              {persenAlphaBulanan !== null ? `${persenAlphaBulanan.toFixed(1)}%` : "—"}
-            </span>
-            <span
-              className={`text-xs font-semibold ${(persenAlphaBulanan ?? 0) > 0 ? "text-clay" : "text-sage"
-                }`}
-            >
-              {(persenAlphaBulanan ?? 0) > 0
-                ? "Pelanggaran di bulan ini"
-                : "Nol pelanggaran (0.0% alpha)"}
-            </span>
-          </div>
-
-          <div className="mt-3 pt-3 border-t border-line/60 flex items-center justify-between text-[11px] text-ink-soft">
-            <span>
-              <span className="font-medium text-clay">{mySummary.jumlahABulanan} A</span>, <span className="font-medium text-amber-600 dark:text-amber-400">{mySummary.jumlahSBulanan || 0} S</span>, <span className="font-medium text-sky-600 dark:text-sky-400">{mySummary.jumlahIBulanan || 0} I</span> • {totalTidakHadirBulanan} tidak hadir dari {mySummary.totalTercatatBulanan} kegiatan
-            </span>
-            <span className="font-medium text-teal">
-              {periodTab === "bulanan" ? "● Aktif" : "Klik untuk pilih"}
-            </span>
-          </div>
-        </div>
-      </section>
-
       {/* Selector Minggu (jika tab Mingguan aktif) */}
       {periodTab === "mingguan" && initialData.weeks.length > 1 && (
-        <div className="flex items-center justify-between rounded-xl border border-line bg-paper-raised px-4 py-3 shadow-xs">
-          <label htmlFor="gelara-week-select" className="text-xs font-medium text-ink-soft">
-            Pilih Periode Minggu:
+        <div className="flex items-center glass-panel !rounded-xl p-1.5 md:p-2 gap-2 md:gap-4 w-full md:w-max max-w-full shadow-sm overflow-hidden">
+          <label htmlFor="gelara-week-select" className="shrink-0 text-[10px] md:text-xs font-bold uppercase tracking-widest text-ink-soft pl-2 md:pl-3">
+            Periode
           </label>
           <select
             id="gelara-week-select"
@@ -243,10 +141,10 @@ function DailyActivityGelaraView({
               sp.set("week", e.target.value);
               router.push(`/daily-activity?${sp.toString()}`);
             }}
-            className="rounded-lg border border-line bg-paper px-3 py-1.5 text-xs font-medium outline-none focus:border-teal focus:ring-1 focus:ring-teal"
+            className="flex-1 min-w-0 w-full text-ellipsis rounded-lg bg-white/40 dark:bg-ink/10 border border-line/50 md:bg-transparent md:border-none px-3 py-2 text-xs md:text-sm font-bold text-ink outline-none focus:ring-0 cursor-pointer hover:bg-ink/5 dark:hover:bg-paper-raised transition-colors"
           >
             {initialData.weeks.map((w) => (
-              <option key={w.id} value={w.id}>
+              <option key={w.id} value={w.id} className="bg-paper text-ink font-medium">
                 {w.label}
               </option>
             ))}
@@ -254,64 +152,151 @@ function DailyActivityGelaraView({
         </div>
       )}
 
-      {/*  (A, S, I) Milik Gelara Ini */}
-      <section className="rounded-xl border border-line bg-paper-raised p-6 shadow-xs space-y-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold">
-              Catatan Ketidakhadiran ({periodTab === "mingguan" ? currentWeek.shortLabel : "Bulan Ini"})
-            </h2>
-            <p className="text-xs text-ink-soft mt-0.5">
-              Daftar kegiatan berstatus Alpha (A), Sakit (S), atau Izin (I) yang tercatat.
+      {/* Progress Cards: Persentase Pelanggaran */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+        {/* Card Mingguan */}
+        <div
+          onClick={() => setPeriodTab("mingguan")}
+          className={`cursor-pointer glass-panel p-6 md:p-10 transition-all duration-300 ease-out flex flex-col justify-between ${periodTab === "mingguan"
+            ? "ring-2 ring-ink shadow-lg scale-[1.02]"
+            : "opacity-60 hover:opacity-100 hover:scale-[1.01]"
+            }`}
+        >
+          <div className="flex items-center justify-between mb-8 md:mb-10">
+            <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-ink-soft">
+              Minggu Ini
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-teal bg-teal-soft/80 px-3 py-1.5 rounded-full">
+              {currentWeek.shortLabel}
+            </span>
+          </div>
+
+          <div>
+            <span className={`text-6xl md:text-7xl font-black tracking-tighter ${(persenAlphaMingguan ?? 0) > 0 ? "text-clay" : "text-sage"}`}>
+              {persenAlphaMingguan !== null ? `${persenAlphaMingguan.toFixed(1)}%` : "—"}
+            </span>
+            <p className={`mt-2 md:mt-3 text-xs md:text-sm font-bold uppercase tracking-wider ${(persenAlphaMingguan ?? 0) > 0 ? "text-clay" : "text-sage"}`}>
+              {(persenAlphaMingguan ?? 0) > 0 ? "Pelanggaran Tercatat" : "Nol Pelanggaran"}
             </p>
           </div>
 
-          <span className="shrink-0 whitespace-nowrap inline-flex items-center rounded-full bg-clay-soft px-3 py-1 text-xs font-semibold text-clay">
+          <div className="mt-8 md:mt-10 pt-5 md:pt-6 border-t border-line flex flex-col gap-3 text-xs font-medium text-ink-soft">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+              <span className="font-semibold uppercase tracking-widest text-[10px]">Rincian Ketidakhadiran</span>
+              <span className="flex gap-4">
+                <span className="text-clay font-bold text-sm">{mySummary.jumlahAMingguan} <span className="opacity-70 text-[10px]">A</span></span>
+                <span className="text-amber-600 dark:text-amber-400 font-bold text-sm">{mySummary.jumlahSMingguan || 0} <span className="opacity-70 text-[10px]">S</span></span>
+                <span className="text-sky-600 dark:text-sky-400 font-bold text-sm">{mySummary.jumlahIMingguan || 0} <span className="opacity-70 text-[10px]">I</span></span>
+              </span>
+            </div>
+            <p className="mt-1 text-[11px] opacity-70 leading-relaxed">
+              {totalTidakHadirMingguan} tidak hadir dari total {mySummary.totalTercatatMingguan} kegiatan terjadwal.
+            </p>
+          </div>
+        </div>
+
+        {/* Card Bulanan */}
+        <div
+          onClick={() => setPeriodTab("bulanan")}
+          className={`cursor-pointer glass-panel p-6 md:p-10 transition-all duration-300 ease-out flex flex-col justify-between ${periodTab === "bulanan"
+            ? "ring-2 ring-ink shadow-lg scale-[1.02]"
+            : "opacity-60 hover:opacity-100 hover:scale-[1.01]"
+            }`}
+        >
+          <div className="flex items-center justify-between mb-8 md:mb-10">
+            <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-ink-soft">
+              Bulan Ini
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-teal bg-teal-soft/80 px-3 py-1.5 rounded-full">
+              {initialData.month.label}
+            </span>
+          </div>
+
+          <div>
+            <span className={`text-6xl md:text-7xl font-black tracking-tighter ${(persenAlphaBulanan ?? 0) > 0 ? "text-clay" : "text-sage"}`}>
+              {persenAlphaBulanan !== null ? `${persenAlphaBulanan.toFixed(1)}%` : "—"}
+            </span>
+            <p className={`mt-2 md:mt-3 text-xs md:text-sm font-bold uppercase tracking-wider ${(persenAlphaBulanan ?? 0) > 0 ? "text-clay" : "text-sage"}`}>
+              {(persenAlphaBulanan ?? 0) > 0 ? "Pelanggaran Tercatat" : "Nol Pelanggaran"}
+            </p>
+          </div>
+
+          <div className="mt-8 md:mt-10 pt-5 md:pt-6 border-t border-line flex flex-col gap-3 text-xs font-medium text-ink-soft">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+              <span className="font-semibold uppercase tracking-widest text-[10px]">Rincian Ketidakhadiran</span>
+              <span className="flex gap-4">
+                <span className="text-clay font-bold text-sm">{mySummary.jumlahABulanan} <span className="opacity-70 text-[10px]">A</span></span>
+                <span className="text-amber-600 dark:text-amber-400 font-bold text-sm">{mySummary.jumlahSBulanan || 0} <span className="opacity-70 text-[10px]">S</span></span>
+                <span className="text-sky-600 dark:text-sky-400 font-bold text-sm">{mySummary.jumlahIBulanan || 0} <span className="opacity-70 text-[10px]">I</span></span>
+              </span>
+            </div>
+            <p className="mt-1 text-[11px] opacity-70 leading-relaxed">
+              {totalTidakHadirBulanan} tidak hadir dari total {mySummary.totalTercatatBulanan} kegiatan terjadwal.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Catatan Ketidakhadiran */}
+      <section className="glass-panel p-6 md:p-10 space-y-6 md:space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div className="max-w-xl">
+            <h2 className="text-2xl font-bold tracking-tight">
+              Catatan Absensi
+            </h2>
+            <p className="text-sm font-medium text-ink-soft mt-2 leading-relaxed">
+              Daftar kegiatan dengan status Alpha (A), Sakit (S), atau Izin (I) pada periode <span className="text-ink font-bold">{periodTab === "mingguan" ? currentWeek.shortLabel : initialData.month.label}</span>.
+            </p>
+          </div>
+          <span className="shrink-0 inline-flex items-center self-start sm:self-auto rounded-full bg-ink px-4 py-2 text-xs font-bold uppercase tracking-widest text-paper-raised">
             {displayedAbsences.length} Catatan
           </span>
         </div>
 
         {displayedAbsences.length === 0 ? (
-          <div className="rounded-xl border border-line bg-paper p-8 text-center space-y-1">
-            <p className="text-sm font-semibold text-sage">
-              Alhamdulillah, tidak ada catatan Ketidakhadiran
+          <div className="rounded-2xl border border-dashed border-line/80 bg-white/30 dark:bg-ink/5 p-8 md:p-12 text-center flex flex-col items-center">
+            <div className="h-12 w-12 rounded-full bg-sage-soft flex items-center justify-center text-sage text-xl mb-4">
+              ✓
+            </div>
+            <p className="text-lg font-bold text-ink">
+              Alhamdulillah, tidak ada catatan.
             </p>
-            <p className="text-xs text-ink-soft">
-              Kamu telah mengikuti seluruh kegiatan terjadwal dengan baik pada periode {periodTab === "mingguan" ? currentWeek.shortLabel : "bulan ini"}.
+            <p className="text-sm font-medium text-ink-soft mt-2 max-w-sm">
+              Kamu telah mengikuti seluruh kegiatan terjadwal dengan disiplin.
             </p>
           </div>
         ) : (
-          <ul className="divide-y divide-line rounded-xl border border-line bg-paper overflow-hidden">
+          <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {displayedAbsences.map((item) => {
-              const statusColor =
-                item.status === "S"
-                  ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50"
-                  : item.status === "I"
-                    ? "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800/50"
-                    : "bg-clay-soft text-clay";
-              const statusLabel =
-                item.status === "S"
-                  ? "Sakit (S)"
-                  : item.status === "I"
-                    ? "Izin (I)"
-                    : "Alpha (A)";
+              const isSakit = item.status === "S";
+              const isIzin = item.status === "I";
+
+              const statusBg = isSakit ? "bg-amber-soft/60" : isIzin ? "bg-sky-50 dark:bg-sky-900/20" : "bg-clay-soft/60";
+              const statusBorder = isSakit ? "border-amber-200 dark:border-amber-800" : isIzin ? "border-sky-200 dark:border-sky-800" : "border-clay/20";
+              const textColor = isSakit ? "text-amber-700 dark:text-amber-400" : isIzin ? "text-sky-700 dark:text-sky-400" : "text-clay";
+
+              const statusLabel = isSakit ? "Sakit" : isIzin ? "Izin" : "Alpha";
+              const statusLetter = item.status;
 
               return (
                 <li
                   key={item.id}
-                  className="flex items-center justify-between px-4 py-3.5 hover:bg-paper-raised transition-colors"
+                  className={`flex flex-col p-5 md:p-6 rounded-2xl border ${statusBg} ${statusBorder} backdrop-blur-sm transition-transform hover:-translate-y-0.5`}
                 >
-                  <div className="min-w-0 pr-3">
-                    <p className="text-sm font-semibold text-ink truncate">
-                      {item.aktivitas}
-                    </p>
-                    <p className="text-xs text-ink-soft mt-0.5">
-                      {item.hari}, {item.tanggalFormatted}
-                    </p>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className={`inline-flex items-center rounded-md px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest bg-white/60 dark:bg-ink/10 ${textColor}`}>
+                      {statusLabel}
+                    </span>
+                    <span className={`text-2xl font-black ${textColor} opacity-40`}>
+                      {statusLetter}
+                    </span>
                   </div>
-                  <span className={`shrink-0 inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold ${statusColor}`}>
-                    {statusLabel}
-                  </span>
+                  <h3 className="text-lg font-bold text-ink leading-tight mb-2">
+                    {item.aktivitas}
+                  </h3>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-ink-soft mt-auto">
+                    {item.hari}, {item.tanggalFormatted}
+                  </p>
                 </li>
               );
             })}
@@ -393,103 +378,103 @@ function DailyActivityPengurusView({
   }
 
   return (
-    <main className="flex-1 max-w-5xl mx-auto w-full px-6 py-8 space-y-8">
+    <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-12 md:py-20 space-y-12 relative z-10">
+
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="max-w-3xl flex flex-col items-start gap-6">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight text-ink">
-              Monitoring Daily Activity
-            </h1>
-            <span className="inline-flex items-center rounded-full bg-teal-soft px-2.5 py-0.5 text-xs font-semibold text-teal">
-              {initialData.month.label}
-            </span>
-          </div>
-          <p className="text-sm text-ink-soft mt-1">
-            Monitoring pelaksanaan aktivitas harian gelara dari spreadsheet, persentase progress mingguan & bulanan, serta rekap ketidakhadiran (A / S / I).
+          <h1 className="text-5xl md:text-7xl font-bold tracking-tighter text-ink leading-tight">
+            Aktivitas Harian.
+          </h1>
+          <p className="mt-6 text-lg font-medium text-ink-soft md:text-xl leading-relaxed">
+            Monitoring pelaksanaan aktivitas harian gelara, persentase progress mingguan & bulanan, serta rekap ketidakhadiran pada <span className="text-teal font-bold">{initialData.month.label}</span>.
           </p>
         </div>
+      </div>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 self-start md:self-auto w-full md:w-auto mt-2 md:mt-0">
+      {/* Filters (Glassmorphism + Adaptif Terang/Gelap) */}
+      <div className="bg-paper-raised/40 dark:bg-ink/5 p-5 rounded-2xl border border-line/50 flex flex-col sm:flex-row sm:items-center gap-4 backdrop-blur-md shadow-sm w-fit">
+        <label className="text-[10px] font-bold uppercase tracking-widest text-ink-soft">Pilih Periode</label>
+        <div className="flex gap-3 w-full sm:w-auto">
           <select
             value={initialData.selectedMonthId}
             onChange={(e) => handleFilterChange({ monthId: e.target.value, weekId: initialData.selectedWeekId })}
-            className="w-full sm:w-auto rounded-lg border border-line bg-paper px-3 py-2 text-xs font-medium outline-none focus:border-teal focus:ring-1 focus:ring-teal"
+            className="w-full sm:w-auto rounded-xl border border-ink/10 dark:border-line bg-paper-raised dark:bg-ink/10 px-4 py-2.5 text-sm font-medium text-ink outline-none focus:border-ink dark:focus:border-teal focus:ring-1 focus:ring-ink dark:focus:ring-teal/50 transition-all cursor-pointer"
           >
             {initialData.availableMonths.map((m) => (
-              <option key={m.id} value={m.id}>{m.label}</option>
+              <option key={m.id} value={m.id} className="bg-paper text-ink font-medium">{m.label}</option>
             ))}
           </select>
           <select
             value={initialData.selectedWeekId}
             onChange={(e) => handleFilterChange({ weekId: e.target.value, monthId: initialData.selectedMonthId })}
-            className="w-full sm:w-auto rounded-lg border border-line bg-paper px-3 py-2 text-xs font-medium outline-none focus:border-teal focus:ring-1 focus:ring-teal"
+            className="w-full sm:w-auto rounded-xl border border-ink/10 dark:border-line bg-paper-raised dark:bg-ink/10 px-4 py-2.5 text-sm font-medium text-ink outline-none focus:border-ink dark:focus:border-teal focus:ring-1 focus:ring-ink dark:focus:ring-teal/50 transition-all cursor-pointer"
           >
             {initialData.weeks.map((w) => (
-              <option key={w.id} value={w.id}>{w.label}</option>
+              <option key={w.id} value={w.id} className="bg-paper text-ink font-medium">{w.label}</option>
             ))}
           </select>
         </div>
       </div>
 
       {/* Overview Stat Cards */}
-      <section className="space-y-2">
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold text-ink-soft uppercase tracking-wide">
-            Statistik Monitoring Keseluruhan
+      <section className="glass-panel p-8 md:p-10 shadow-sm flex flex-col md:flex-row gap-8">
+
+        {/* Main Stat */}
+        <div className="w-full md:w-5/12 flex flex-col justify-center items-center text-center p-8 rounded-3xl border border-teal/30 bg-teal-soft/80 backdrop-blur-sm shadow-sm transition-transform hover:scale-[1.02]">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-teal mb-3">Rata-rata Progress</p>
+          <p className="text-7xl lg:text-8xl font-black text-teal tracking-tighter">
+            {avgWeeklyProgress !== null ? `${avgWeeklyProgress}%` : "—"}
           </p>
-          <span className="text-[11px] text-ink-soft">
-            {initialData.totalSheetsCount || initialData.sheetNames?.length || 24} Sheet Aktivitas Terhubung
-          </span>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-teal/70 mt-4">{currentWeek.shortLabel}</p>
         </div>
 
-        <div className="flex flex-row gap-3 sm:gap-4">
-          {/* Main Stat (Big Box, Kiri) */}
-          <div className="w-[45%] md:w-1/3 rounded-xl border border-teal bg-teal-soft/10 p-4 sm:p-6 shadow-sm flex flex-col justify-center items-center text-center">
-            <p className="text-xs sm:text-sm font-semibold text-teal mb-2">Rata-rata Progress</p>
-            <p className="text-4xl sm:text-6xl font-extrabold text-teal tracking-tight">
-              {avgWeeklyProgress !== null ? `${avgWeeklyProgress}%` : "—"}
-            </p>
-            <p className="text-[10px] sm:text-xs text-teal/70 mt-1">{currentWeek.shortLabel}</p>
-          </div>
-
-          {/* Secondary Stats (3 Small Boxes, Kanan Bertumpuk Vertikal) */}
-          <div className="w-[55%] md:w-2/3 flex flex-col gap-2 sm:gap-3">
-            <div className="flex-1 rounded-xl border border-line bg-paper-raised p-3 sm:px-5 shadow-xs flex items-center justify-between">
-              <p className="text-[11px] sm:text-sm text-ink-soft font-medium">Total Gelara</p>
-              <p className="text-lg sm:text-2xl font-bold text-ink">
-                {initialData.gelaraSummaries.length}
+        {/* Secondary Stats Grid */}
+        <div className="w-full md:w-7/12 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="col-span-1 sm:col-span-2 rounded-3xl border border-line/50 bg-paper-raised/40 dark:bg-ink/10 p-8 flex items-center justify-between shadow-sm backdrop-blur-sm transition-transform hover:scale-[1.01]">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mb-1">Total Gelara</p>
+              <p className="text-xs font-medium text-ink-soft opacity-80">
+                {initialData.totalSheetsCount || initialData.sheetNames?.length || 0} sheet terhubung
               </p>
             </div>
+            <p className="text-5xl lg:text-6xl font-bold text-ink tracking-tight">{initialData.gelaraSummaries.length}</p>
+          </div>
 
-            <div className="flex-1 rounded-xl border border-line bg-paper-raised p-3 sm:px-5 shadow-xs flex items-center justify-between">
-              <p className="text-[11px] sm:text-sm text-ink-soft font-medium">Total Alpha</p>
-              <p className="text-lg sm:text-2xl font-bold text-clay">{totalWeeklyA}</p>
-            </div>
+          <div className="rounded-3xl border border-line/50 bg-paper-raised/40 dark:bg-ink/10 p-8 flex flex-col justify-center shadow-sm backdrop-blur-sm transition-transform hover:scale-[1.02]">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mb-3">Total Alpha</p>
+            <p className="text-5xl font-black text-clay tracking-tight">{totalWeeklyA}</p>
+          </div>
 
-            <div className="flex-1 rounded-xl border border-line bg-paper-raised p-3 sm:px-5 shadow-xs flex items-center justify-between">
-              <p className="text-[11px] sm:text-sm text-ink-soft font-medium">Sakit & Izin</p>
-              <div className="flex items-baseline gap-1 sm:gap-1.5">
-                <span className="text-base sm:text-xl font-bold text-amber-600 dark:text-amber-400">{totalWeeklyS}</span>
-                <span className="text-[10px] sm:text-xs text-ink-soft">S</span>
-                <span className="text-ink-soft text-[10px] sm:text-xs mx-0.5">/</span>
-                <span className="text-base sm:text-xl font-bold text-sky-600 dark:text-sky-400">{totalWeeklyI}</span>
-                <span className="text-[10px] sm:text-xs text-ink-soft">I</span>
-              </div>
+          <div className="rounded-3xl border border-line/50 bg-paper-raised/40 dark:bg-ink/10 p-8 flex flex-col justify-center shadow-sm backdrop-blur-sm transition-transform hover:scale-[1.02]">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mb-3">Sakit & Izin</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-4xl font-black text-amber-600 dark:text-amber-400 tracking-tight">{totalWeeklyS}</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-ink-soft">Sakit</span>
+              <span className="text-ink-soft mx-1 opacity-30">/</span>
+              <span className="text-4xl font-black text-sky-600 dark:text-sky-400 tracking-tight">{totalWeeklyI}</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-ink-soft">Izin</span>
             </div>
           </div>
         </div>
       </section>
 
       {/* Summary Table / Cards */}
-      <section className="space-y-4 pt-2">
-        <DailyActivitySummary
-          summaries={initialData.gelaraSummaries}
-          onSelectGelara={(summary) => setSelectedGelaraForDetail(summary)}
-          selectedWeekLabel={currentWeek.label}
-          selectedMonthLabel={initialData.month.label}
-        />
+      <section className="glass-panel p-8 md:p-10 shadow-sm overflow-hidden">
+        <div className="mb-8 border-b border-line/50 pb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h2 className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mb-1">Data</h2>
+            <h2 className="text-3xl font-bold tracking-tight text-ink">Rincian Gelara</h2>
+          </div>
+        </div>
+        <div className="rounded-xl overflow-hidden border border-line/50">
+          <DailyActivitySummary
+            summaries={initialData.gelaraSummaries}
+            onSelectGelara={(summary) => setSelectedGelaraForDetail(summary)}
+            selectedWeekLabel={currentWeek.label}
+            selectedMonthLabel={initialData.month.label}
+          />
+        </div>
       </section>
 
       {/* Gelara Detail Modal */}
