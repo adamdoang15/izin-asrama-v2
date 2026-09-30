@@ -28,8 +28,11 @@ export const authConfig: NextAuthConfig = {
       const isDailyActivityRoute = nextUrl.pathname.startsWith("/daily-activity");
 
       // Jika pengguna sudah login, membuka halaman awal (/) atau login (/login)
-      // akan langsung dialihkan ke /beranda
+      // akan langsung dialihkan ke dashboard sesuai role
       if (isLoggedIn && (isRootRoute || isLoginRoute)) {
+        if (role === "PENGURUS") {
+          return Response.redirect(new URL("/kelola-akun", nextUrl));
+        }
         return Response.redirect(new URL("/beranda", nextUrl));
       }
 
