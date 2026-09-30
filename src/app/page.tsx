@@ -17,6 +17,9 @@ export const metadata: Metadata = {
 export default async function LandingPage() {
   const session = await auth();
   if (session?.user) {
+    if (session.user.role === "PENGURUS") {
+      redirect("/kelola-akun");
+    }
     redirect("/beranda");
   }
 
