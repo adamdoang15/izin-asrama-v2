@@ -77,7 +77,7 @@ function formatMonth(key: string) {
 
 function StatCard({ label, value, note }: { label: string; value: number; note?: string }) {
   return (
-    <div className="rounded-2xl border border-line bg-paper-raised p-5 shadow-sm">
+    <div className="glass-panel p-5">
       <p className="text-sm text-ink-soft">{label}</p>
       <p className="mt-2 text-3xl font-semibold tracking-tight">{value.toLocaleString("id-ID")}</p>
       {note && <p className="mt-1 text-xs text-ink-soft">{note}</p>}
@@ -88,7 +88,7 @@ function StatCard({ label, value, note }: { label: string; value: number; note?:
 function Chart({ buckets }: { buckets: Bucket[] }) {
   const max = Math.max(...buckets.map((b) => b.count), 1);
   return (
-    <div className="rounded-2xl border border-line bg-paper-raised p-5 shadow-sm">
+    <div className="glass-panel p-5">
       <div className="mb-5 flex items-end justify-between gap-4">
         <div>
           <h2 className="font-semibold">Tren pengajuan izin</h2>
@@ -213,7 +213,7 @@ export default function StatsLanding({ rows }: Props) {
 
   return (
     <main className="flex-1">
-      <section className="border-b border-line bg-paper-raised">
+      <section className="glass-panel !border-l-0 !border-r-0 !border-t-0 !rounded-none">
         <div className="mx-auto max-w-6xl px-6 pb-12 pt-8 md:pb-16 md:pt-12">
           <div className="flex flex-col gap-7 md:flex-row md:items-end md:justify-between">
             <div className="max-w-2xl">
@@ -228,7 +228,7 @@ export default function StatsLanding({ rows }: Props) {
       <section className="mx-auto max-w-6xl px-6 py-8 md:py-10">
         <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div><h2 className="text-lg font-semibold">Statistik izin</h2><p className="mt-1 text-sm text-ink-soft">Pilih rentang waktu yang ingin dipantau.</p></div>
-          <div className="inline-flex w-fit rounded-xl border border-line bg-paper-raised p-1">
+          <div className="inline-flex w-fit glass-panel !rounded-xl p-1">
             {(["HARIAN", "MINGGUAN", "BULANAN", "TAHUNAN"] as Period[]).map((item) => (
               <button key={item} type="button" onClick={() => setPeriod(item)} className={`rounded-lg px-3 py-2 text-xs font-medium transition-colors ${period === item ? "bg-teal text-paper-raised" : "text-ink-soft hover:text-ink"}`}>
                 {item[0] + item.slice(1).toLowerCase()}
@@ -247,7 +247,7 @@ export default function StatsLanding({ rows }: Props) {
 
         <div className="mt-5"><Chart buckets={data.buckets} /></div>
 
-        <div className="mt-5 rounded-2xl border border-line bg-paper-raised p-5 shadow-sm">
+        <div className="mt-5 glass-panel p-5">
           <h2 className="font-semibold">Indikator kepulangan</h2>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <div className="rounded-xl bg-sage-soft p-4"><p className="text-xs text-ink-soft">Tepat waktu</p><p className="mt-1 text-xl font-semibold text-sage">{Math.max(data.returned - data.late, 0).toLocaleString("id-ID")}</p></div>
@@ -255,7 +255,7 @@ export default function StatsLanding({ rows }: Props) {
           </div>
         </div>
 
-        <div className="mt-5 rounded-2xl border border-line bg-paper-raised p-5 shadow-sm">
+        <div className="mt-5 glass-panel p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="font-semibold text-ink">Alur & SOP Perizinan Asrama</h2>

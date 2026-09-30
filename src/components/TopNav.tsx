@@ -18,7 +18,7 @@ export default async function TopNav() {
   }
 
   return (
-    <header className="sticky top-0 z-20 border-b border-line bg-paper-raised">
+    <header className="sticky top-0 z-20 glass-panel !border-l-0 !border-r-0 !border-t-0 !rounded-none">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-3">
 
         {/* Logo + Nama */}
