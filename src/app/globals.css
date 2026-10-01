@@ -76,7 +76,7 @@ body {
     var(--paper)
   );
   background-size: 400% 400%;
-  animation: gradientBG 15s ease infinite;
+  /* animation: gradientBG 15s ease infinite; Disabled for mobile performance testing */
   color: var(--ink);
   min-height: 100vh;
 }
