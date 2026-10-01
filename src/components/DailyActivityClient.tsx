@@ -319,6 +319,7 @@ function DailyActivityPengurusView({
   const router = useRouter();
   const [selectedGelaraForDetail, setSelectedGelaraForDetail] =
     useState<GelaraSummary | null>(null);
+  const [overviewTab, setOverviewTab] = useState<"mingguan" | "bulanan" | "tahunan">("mingguan");
 
   const currentWeek =
     initialData.weeks.find((w) => w.id === initialData.selectedWeekId) ||
@@ -362,6 +363,20 @@ function DailyActivityPengurusView({
     (acc, s) => acc + (s.jumlahIMingguan || 0),
     0
   );
+  const totalMonthlyS = initialData.gelaraSummaries.reduce(
+    (acc, s) => acc + (s.jumlahSBulanan || 0),
+    0
+  );
+  const totalMonthlyI = initialData.gelaraSummaries.reduce(
+    (acc, s) => acc + (s.jumlahIBulanan || 0),
+    0
+  );
+
+  // Placeholder untuk tahunan
+  const dummyYearlyProgress = 92.5;
+  const totalYearlyA = 45;
+  const totalYearlyS = 12;
+  const totalYearlyI = 8;
 
   function handleFilterChange(params: {
     weekId?: string;
@@ -392,68 +407,75 @@ function DailyActivityPengurusView({
         </div>
       </div>
 
-      {/* Filters (Glassmorphism + Adaptif Terang/Gelap) */}
-      <div className="bg-paper-raised/40 dark:bg-ink/5 p-5 rounded-2xl border border-line/50 flex flex-col sm:flex-row sm:items-center gap-4 backdrop-blur-md shadow-sm w-fit">
-        <label className="text-[10px] font-bold uppercase tracking-widest text-ink-soft">Pilih Periode</label>
-        <div className="flex gap-3 w-full sm:w-auto">
-          <select
-            value={initialData.selectedMonthId}
-            onChange={(e) => handleFilterChange({ monthId: e.target.value, weekId: initialData.selectedWeekId })}
-            className="w-full sm:w-auto rounded-xl border border-ink/10 dark:border-line bg-paper-raised dark:bg-ink/10 px-4 py-2.5 text-sm font-medium text-ink outline-none focus:border-ink dark:focus:border-teal focus:ring-1 focus:ring-ink dark:focus:ring-teal/50 transition-all cursor-pointer"
-          >
-            {initialData.availableMonths.map((m) => (
-              <option key={m.id} value={m.id} className="bg-paper text-ink font-medium">{m.label}</option>
-            ))}
-          </select>
-          <select
-            value={initialData.selectedWeekId}
-            onChange={(e) => handleFilterChange({ weekId: e.target.value, monthId: initialData.selectedMonthId })}
-            className="w-full sm:w-auto rounded-xl border border-ink/10 dark:border-line bg-paper-raised dark:bg-ink/10 px-4 py-2.5 text-sm font-medium text-ink outline-none focus:border-ink dark:focus:border-teal focus:ring-1 focus:ring-ink dark:focus:ring-teal/50 transition-all cursor-pointer"
-          >
-            {initialData.weeks.map((w) => (
-              <option key={w.id} value={w.id} className="bg-paper text-ink font-medium">{w.label}</option>
-            ))}
-          </select>
-        </div>
-      </div>
+
 
       {/* Overview Stat Cards */}
-      <section className="glass-panel p-8 md:p-10 shadow-sm flex flex-col md:flex-row gap-8">
-
-        {/* Main Stat */}
-        <div className="w-full md:w-5/12 flex flex-col justify-center items-center text-center p-8 rounded-3xl border border-teal/30 bg-teal-soft/80 backdrop-blur-sm shadow-sm transition-transform hover:scale-[1.02]">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-teal mb-3">Rata-rata Progress</p>
-          <p className="text-7xl lg:text-8xl font-black text-teal tracking-tighter">
-            {avgWeeklyProgress !== null ? `${avgWeeklyProgress}%` : "—"}
-          </p>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-teal/70 mt-4">{currentWeek.shortLabel}</p>
+      <section className="glass-panel p-8 md:p-10 shadow-sm flex flex-col gap-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-line/50 pb-4">
+          <h2 className="text-xl font-bold tracking-tight text-ink">Ringkasan Eksekutif</h2>
+          <div className="flex rounded-xl bg-paper-raised/40 dark:bg-ink/10 p-1 border border-line/50 w-fit">
+            {(["mingguan", "bulanan", "tahunan"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setOverviewTab(tab)}
+                className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all ${
+                  overviewTab === tab
+                    ? "bg-ink text-paper-raised shadow-md"
+                    : "text-ink-soft hover:bg-white/40 hover:text-ink"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Secondary Stats Grid */}
-        <div className="w-full md:w-7/12 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="col-span-1 sm:col-span-2 rounded-3xl border border-line/50 bg-paper-raised/40 dark:bg-ink/10 p-8 flex items-center justify-between shadow-sm backdrop-blur-sm transition-transform hover:scale-[1.01]">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mb-1">Total Gelara</p>
-              <p className="text-xs font-medium text-ink-soft opacity-80">
-                {initialData.totalSheetsCount || initialData.sheetNames?.length || 0} sheet terhubung
+        <div className="flex flex-col md:flex-row gap-8">
+          {/* Main Stat */}
+          <div className="w-full md:w-5/12 flex flex-col justify-center items-center text-center p-8 rounded-3xl border border-teal/30 bg-teal-soft/80 backdrop-blur-sm shadow-sm transition-transform hover:scale-[1.02]">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-teal mb-3">Rata-rata Progress</p>
+            <p className="text-7xl lg:text-8xl font-black text-teal tracking-tighter">
+              {overviewTab === "mingguan" && (avgWeeklyProgress !== null ? `${avgWeeklyProgress}%` : "—")}
+              {overviewTab === "bulanan" && (avgMonthlyProgress !== null ? `${avgMonthlyProgress}%` : "—")}
+              {overviewTab === "tahunan" && `${dummyYearlyProgress}%`}
+            </p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-teal/70 mt-4">
+              {overviewTab === "mingguan" ? currentWeek.shortLabel : overviewTab === "bulanan" ? initialData.month.label : "TA 2026/2027 (Juli - Juni)"}
+            </p>
+          </div>
+
+          {/* Secondary Stats Grid */}
+          <div className="w-full md:w-7/12 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="col-span-1 sm:col-span-2 rounded-3xl border border-line/50 bg-paper-raised/40 dark:bg-ink/10 p-8 flex items-center justify-between shadow-sm backdrop-blur-sm transition-transform hover:scale-[1.01]">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mb-1">Total Gelara</p>
+                <p className="text-xs font-medium text-ink-soft opacity-80">
+                  {initialData.totalSheetsCount || initialData.sheetNames?.length || 0} sheet terhubung
+                </p>
+              </div>
+              <p className="text-5xl lg:text-6xl font-bold text-ink tracking-tight">{initialData.gelaraSummaries.length}</p>
+            </div>
+
+            <div className="rounded-3xl border border-line/50 bg-paper-raised/40 dark:bg-ink/10 p-8 flex flex-col justify-center shadow-sm backdrop-blur-sm transition-transform hover:scale-[1.02]">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mb-3">Total Alpha</p>
+              <p className="text-5xl font-black text-clay tracking-tight">
+                {overviewTab === "mingguan" ? totalWeeklyA : overviewTab === "bulanan" ? totalMonthlyA : totalYearlyA}
               </p>
             </div>
-            <p className="text-5xl lg:text-6xl font-bold text-ink tracking-tight">{initialData.gelaraSummaries.length}</p>
-          </div>
 
-          <div className="rounded-3xl border border-line/50 bg-paper-raised/40 dark:bg-ink/10 p-8 flex flex-col justify-center shadow-sm backdrop-blur-sm transition-transform hover:scale-[1.02]">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mb-3">Total Alpha</p>
-            <p className="text-5xl font-black text-clay tracking-tight">{totalWeeklyA}</p>
-          </div>
-
-          <div className="rounded-3xl border border-line/50 bg-paper-raised/40 dark:bg-ink/10 p-8 flex flex-col justify-center shadow-sm backdrop-blur-sm transition-transform hover:scale-[1.02]">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mb-3">Sakit & Izin</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-black text-amber-600 dark:text-amber-400 tracking-tight">{totalWeeklyS}</span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-ink-soft">Sakit</span>
-              <span className="text-ink-soft mx-1 opacity-30">/</span>
-              <span className="text-4xl font-black text-sky-600 dark:text-sky-400 tracking-tight">{totalWeeklyI}</span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-ink-soft">Izin</span>
+            <div className="rounded-3xl border border-line/50 bg-paper-raised/40 dark:bg-ink/10 p-8 flex flex-col justify-center shadow-sm backdrop-blur-sm transition-transform hover:scale-[1.02]">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mb-3">Sakit & Izin</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-black text-amber-600 dark:text-amber-400 tracking-tight">
+                  {overviewTab === "mingguan" ? totalWeeklyS : overviewTab === "bulanan" ? totalMonthlyS : totalYearlyS}
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-ink-soft">Sakit</span>
+                <span className="text-ink-soft mx-1 opacity-30">/</span>
+                <span className="text-4xl font-black text-sky-600 dark:text-sky-400 tracking-tight">
+                  {overviewTab === "mingguan" ? totalWeeklyI : overviewTab === "bulanan" ? totalMonthlyI : totalYearlyI}
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-ink-soft">Izin</span>
+              </div>
             </div>
           </div>
         </div>
@@ -461,10 +483,34 @@ function DailyActivityPengurusView({
 
       {/* Summary Table / Cards */}
       <section className="glass-panel p-8 md:p-10 shadow-sm overflow-hidden">
-        <div className="mb-8 border-b border-line/50 pb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="mb-8 border-b border-line/50 pb-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <h2 className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mb-1">Data</h2>
             <h2 className="text-3xl font-bold tracking-tight text-ink">Rincian Gelara</h2>
+          </div>
+          
+          <div className="bg-paper-raised/60 dark:bg-ink/5 p-3 rounded-2xl border border-line/50 flex flex-col sm:flex-row sm:items-center gap-3 shadow-sm w-full md:w-auto">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-ink-soft whitespace-nowrap pl-2">Pilih Periode:</label>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <select
+                value={initialData.selectedMonthId}
+                onChange={(e) => handleFilterChange({ monthId: e.target.value, weekId: initialData.selectedWeekId })}
+                className="w-full sm:w-auto rounded-xl border border-ink/10 dark:border-line bg-white/60 dark:bg-ink/10 px-4 py-2.5 text-sm font-medium text-ink outline-none focus:border-ink dark:focus:border-teal focus:ring-1 focus:ring-ink dark:focus:ring-teal/50 transition-all cursor-pointer hover:bg-white dark:hover:bg-ink/20"
+              >
+                {initialData.availableMonths.map((m) => (
+                  <option key={m.id} value={m.id} className="bg-paper text-ink font-medium">{m.label}</option>
+                ))}
+              </select>
+              <select
+                value={initialData.selectedWeekId}
+                onChange={(e) => handleFilterChange({ weekId: e.target.value, monthId: initialData.selectedMonthId })}
+                className="w-full sm:w-auto rounded-xl border border-ink/10 dark:border-line bg-white/60 dark:bg-ink/10 px-4 py-2.5 text-sm font-medium text-ink outline-none focus:border-ink dark:focus:border-teal focus:ring-1 focus:ring-ink dark:focus:ring-teal/50 transition-all cursor-pointer hover:bg-white dark:hover:bg-ink/20"
+              >
+                {initialData.weeks.map((w) => (
+                  <option key={w.id} value={w.id} className="bg-paper text-ink font-medium">{w.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
         <div className="rounded-xl overflow-hidden border border-line/50">

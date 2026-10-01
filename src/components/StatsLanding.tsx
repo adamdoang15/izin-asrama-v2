@@ -172,19 +172,19 @@ export default function StatsLanding({ rows }: Props) {
       ? Array.from({ length: 7 }, (_, i) => localDateKey(addDays(today, i - 6)))
       : period === "BULANAN"
         ? buckets.map((_, i) => {
-            const p = parts(today);
-            const d = new Date(Date.UTC(Number(p.year), Number(p.month) - 1 + i - 11, 1, 12));
-            return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-          })
+          const p = parts(today);
+          const d = new Date(Date.UTC(Number(p.year), Number(p.month) - 1 + i - 11, 1, 12));
+          return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+        })
         : period === "TAHUNAN"
           ? buckets.map((b) => b.label)
           : null;
 
     const inPeriod = keys
       ? rows.filter((r) => {
-          const key = period === "HARIAN" ? keyOf(r.tanggal_keluar) : period === "BULANAN" ? monthKey(r.tanggal_keluar) : yearKey(r.tanggal_keluar);
-          return keys.includes(key);
-        })
+        const key = period === "HARIAN" ? keyOf(r.tanggal_keluar) : period === "BULANAN" ? monthKey(r.tanggal_keluar) : yearKey(r.tanggal_keluar);
+        return keys.includes(key);
+      })
       : rows;
 
     if (period === "MINGGUAN") {
@@ -220,7 +220,7 @@ export default function StatsLanding({ rows }: Props) {
             Aktivitas Izin Asrama.
           </h1>
           <p className="mt-8 max-w-2xl text-lg font-medium leading-relaxed text-ink-soft md:text-2xl">
-            Transparansi perizinan gelara secara real-time. Memantau statistik kepulangan, keterlambatan, dan mobilitas harian asrama.
+            Transparansi perizinan gelara secara real-time. Memantau statistik kepulangan, keterlambatan gelara asrama.
           </p>
         </div>
       </section>
@@ -229,10 +229,10 @@ export default function StatsLanding({ rows }: Props) {
         <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div className="glass-panel !rounded-2xl flex w-full max-w-full overflow-x-auto scrollbar-none md:w-fit md:inline-flex p-1.5 shadow-sm">
             {(["HARIAN", "MINGGUAN", "BULANAN", "TAHUNAN"] as Period[]).map((item) => (
-              <button 
-                key={item} 
-                type="button" 
-                onClick={() => setPeriod(item)} 
+              <button
+                key={item}
+                type="button"
+                onClick={() => setPeriod(item)}
                 className={`shrink-0 flex-1 md:flex-none rounded-xl px-5 py-2.5 text-xs font-bold tracking-wide uppercase transition-all duration-300 ${period === item ? "bg-ink text-paper-raised shadow-md" : "text-ink-soft hover:text-ink hover:bg-white/40"}`}
               >
                 {item}
@@ -251,7 +251,7 @@ export default function StatsLanding({ rows }: Props) {
             </div>
             <p className="mt-16 text-sm font-medium text-ink-soft">Jumlah seluruh perizinan yang tercatat dalam sistem pada periode yang dipilih.</p>
           </div>
-          
+
           {/* Minor Stats Grid */}
           <div className="col-span-1 md:col-span-7 grid grid-cols-2 gap-5">
             <StatCard label="Disetujui" value={data.approved} />
