@@ -15,6 +15,7 @@ import { getUserById, syncBlacklistStatus } from "@/services/user.service";
 import IzinForm from "@/components/IzinForm";
 import RevisiIzinForm from "@/components/RevisiIzinForm";
 import AdminIzinRow from "@/components/AdminIzinRow";
+import ExportLaporanForm from "@/components/ExportLaporanForm";
 import { StatusIzin, IzinRowWithUserJoin, IzinWithSantri } from "@/lib/types";
 
 // Note: IzinForm, RevisiIzinForm, AdminIzinRow, StatusPill should theoretically be upgraded to V2 as well.
@@ -219,9 +220,21 @@ export async function BerandaPengurus({ searchParams }: { searchParams: Promise<
           )}
         </section>
 
-        {/* Database Search */}
-        <section className="lg:col-span-7 glass-panel p-8 md:p-10 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 border-b border-line/50 pb-6">
+        {/* Right Column Wrapper */}
+        <div className="lg:col-span-7 space-y-8">
+
+          {/* Export Laporan */}
+          <section className="glass-panel p-8 md:p-10 shadow-sm">
+            <div className="mb-6 border-b border-line/50 pb-4">
+               <h2 className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mb-1">Unduhan</h2>
+               <h2 className="text-2xl font-bold tracking-tight text-ink">Ekspor Laporan Izin</h2>
+            </div>
+            <ExportLaporanForm />
+          </section>
+
+          {/* Database Search */}
+          <section className="glass-panel p-8 md:p-10 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 border-b border-line/50 pb-6">
             <div>
               <h2 className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mb-1">Database</h2>
               <h2 className="text-3xl font-bold tracking-tight text-ink">Semua Pengajuan</h2>
@@ -287,6 +300,7 @@ export async function BerandaPengurus({ searchParams }: { searchParams: Promise<
             </Link>
           </div>
         </section>
+        </div>
       </div>
     </main>
   );

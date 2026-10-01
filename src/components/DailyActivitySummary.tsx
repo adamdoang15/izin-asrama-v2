@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import type { GelaraSummary } from "@/services/daily-activity.service";
 import { SearchIcon } from "./icons";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 type SortKey =
   | "no"
@@ -106,6 +107,22 @@ export default function DailyActivitySummary({
     return list;
   }, [summaries, search, sortKey, sortDir]);
 
+  const parentRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: filteredSummaries.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 61,
+    overscan: 5,
+  });
+
+  const mobileParentRef = useRef<HTMLDivElement>(null);
+  const mobileRowVirtualizer = useVirtualizer({
+    count: filteredSummaries.length,
+    getScrollElement: () => mobileParentRef.current,
+    estimateSize: () => 180,
+    overscan: 5,
+  });
+
   return (
     <div className="space-y-4">
       {/* Header & Search */}
@@ -154,10 +171,10 @@ export default function DailyActivitySummary({
 
       {/* Desktop / Tablet Table */}
       <div className="hidden md:block overflow-hidden rounded-xl border border-line bg-paper-raised shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-line bg-paper/60 text-xs font-semibold text-ink-soft uppercase tracking-wider">
+        <div ref={parentRef} className="overflow-auto max-h-[600px] scrollbar-thin scrollbar-thumb-line">
+          <table className="w-full text-left text-sm relative">
+            <thead className="sticky top-0 z-10">
+              <tr className="border-b border-line bg-paper shadow-sm text-xs font-semibold text-ink-soft uppercase tracking-wider">
                 {(["no", "namaGelara", "progressMingguan", "progressBulanan", "jumlahAMingguan", "jumlahABulanan"] as SortKey[]).map((col) => {
                   const active = sortKey === col;
                   const isCenter = col !== "namaGelara";
@@ -171,7 +188,7 @@ export default function DailyActivitySummary({
                         col === "no" ? "w-12 text-center" : isCenter ? "text-center" : ""
                       }`}
                     >
-                      <span className="inline-flex items-center gap-0.5 justify-center">
+                      <span className="inline-flex items-center gap-0.5 justify-center bg-paper">
                         {col === "progressMingguan" ? (
                           <>
                             Progress Mingguan
@@ -190,10 +207,10 @@ export default function DailyActivitySummary({
                     </th>
                   );
                 })}
-                <th scope="col" className="px-4 py-3 text-right">Aksi</th>
+                <th scope="col" className="px-4 py-3 text-right bg-paper">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-line">
+            <tbody className="divide-y divide-line bg-paper">
               {filteredSummaries.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-sm text-ink-soft">
@@ -201,65 +218,84 @@ export default function DailyActivitySummary({
                   </td>
                 </tr>
               ) : (
-                filteredSummaries.map((row, idx) => (
-                  <tr
-                    key={row.namaGelara}
-                    className="hover:bg-paper/50 transition-colors group cursor-pointer"
-                    onClick={() => onSelectGelara(row)}
-                  >
-                    <td className="px-4 py-3.5 text-center text-xs text-ink-soft font-medium">
-                      {idx + 1}
-                    </td>
-                    <td className="px-4 py-3.5 font-medium text-ink">
-                      <div className="flex items-center gap-2.5">
-                        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-teal-soft text-xs font-semibold text-teal">
-                          {row.namaGelara.trim()?.[0]?.toUpperCase()}
-                        </span>
-                        <span>{row.namaGelara}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 text-center">
-                      {row.progressMingguan !== null ? (
-                        <span className="inline-flex items-center gap-1.5 font-semibold text-teal bg-teal-soft px-2.5 py-1 rounded-md text-xs">
-                          {row.progressMingguan.toFixed(1)}%
-                        </span>
-                      ) : (
-                        <span className="text-xs text-ink-soft italic">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3.5 text-center">
-                      {row.progressBulanan !== null ? (
-                        <span className="inline-flex items-center gap-1.5 font-semibold text-teal bg-teal-soft px-2.5 py-1 rounded-md text-xs">
-                          {row.progressBulanan.toFixed(1)}%
-                        </span>
-                      ) : (
-                        <span className="text-xs text-ink-soft italic">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3.5 text-center">
-                      <span className={`text-xs font-medium ${row.jumlahAMingguan > 0 ? "text-clay font-semibold" : "text-ink-soft"}`}>
-                        {row.jumlahAMingguan}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 text-center">
-                      <span className={`text-xs font-medium ${row.jumlahABulanan > 0 ? "text-clay font-semibold" : "text-ink-soft"}`}>
-                        {row.jumlahABulanan}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 text-right">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSelectGelara(row);
-                        }}
-                        className="rounded-md border border-line bg-paper px-2.5 py-1 text-xs font-medium text-ink hover:bg-teal hover:text-paper-raised hover:border-teal transition-all"
+                <>
+                  {rowVirtualizer.getVirtualItems().length > 0 && (
+                    <tr style={{ height: `${rowVirtualizer.getVirtualItems()[0]?.start ?? 0}px` }} />
+                  )}
+                  {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                    const row = filteredSummaries[virtualRow.index];
+                    const idx = virtualRow.index;
+                    return (
+                      <tr
+                        key={row.namaGelara}
+                        className="hover:bg-paper-raised transition-colors group cursor-pointer"
+                        onClick={() => onSelectGelara(row)}
                       >
-                        Lihat Detail
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                        <td className="px-4 py-3.5 text-center text-xs text-ink-soft font-medium">
+                          {idx + 1}
+                        </td>
+                        <td className="px-4 py-3.5 font-medium text-ink">
+                          <div className="flex items-center gap-2.5">
+                            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-teal-soft text-xs font-semibold text-teal">
+                              {row.namaGelara.trim()?.[0]?.toUpperCase()}
+                            </span>
+                            <span>{row.namaGelara}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 text-center">
+                          {row.progressMingguan !== null ? (
+                            <span className="inline-flex items-center gap-1.5 font-semibold text-teal bg-teal-soft px-2.5 py-1 rounded-md text-xs">
+                              {row.progressMingguan.toFixed(1)}%
+                            </span>
+                          ) : (
+                            <span className="text-xs text-ink-soft italic">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5 text-center">
+                          {row.progressBulanan !== null ? (
+                            <span className="inline-flex items-center gap-1.5 font-semibold text-teal bg-teal-soft px-2.5 py-1 rounded-md text-xs">
+                              {row.progressBulanan.toFixed(1)}%
+                            </span>
+                          ) : (
+                            <span className="text-xs text-ink-soft italic">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3.5 text-center">
+                          <span className={`text-xs font-medium ${row.jumlahAMingguan > 0 ? "text-clay font-semibold" : "text-ink-soft"}`}>
+                            {row.jumlahAMingguan}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-center">
+                          <span className={`text-xs font-medium ${row.jumlahABulanan > 0 ? "text-clay font-semibold" : "text-ink-soft"}`}>
+                            {row.jumlahABulanan}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-right">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectGelara(row);
+                            }}
+                            className="rounded-md border border-line bg-paper px-2.5 py-1 text-xs font-medium text-ink hover:bg-teal hover:text-paper-raised hover:border-teal transition-all"
+                          >
+                            Lihat Detail
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {rowVirtualizer.getVirtualItems().length > 0 && (
+                    <tr
+                      style={{
+                        height: `${
+                          rowVirtualizer.getTotalSize() -
+                          (rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1]?.end ?? 0)
+                        }px`,
+                      }}
+                    />
+                  )}
+                </>
               )}
             </tbody>
           </table>
@@ -267,91 +303,117 @@ export default function DailyActivitySummary({
       </div>
 
       {/* Mobile Card List */}
-      <div className="md:hidden space-y-4">
+      <div
+        ref={mobileParentRef}
+        className="md:hidden overflow-auto max-h-[70vh] scrollbar-thin scrollbar-thumb-line pb-4 px-1"
+      >
         {filteredSummaries.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-line/80 bg-paper-raised/30 dark:bg-ink/5 p-8 text-center text-sm font-bold text-ink">
+          <div className="rounded-2xl border border-dashed border-line/80 bg-paper-raised/30 dark:bg-ink/5 p-8 text-center text-sm font-bold text-ink mt-2">
             Tidak ada data gelara yang sesuai.
           </div>
         ) : (
-          filteredSummaries.map((row, idx) => (
-            <div
-              key={row.namaGelara}
-              onClick={() => onSelectGelara(row)}
-              className="rounded-2xl border border-line/50 bg-white/40 dark:bg-ink/10 p-5 shadow-sm space-y-4 cursor-pointer hover:scale-[1.01] hover:shadow-md transition-all backdrop-blur-sm"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-teal-soft/80 border border-teal/20 text-sm font-bold text-teal shadow-sm">
-                    {row.namaGelara.trim()?.[0]?.toUpperCase()}
-                  </span>
-                  <div>
-                    <h3 className="text-sm font-bold text-ink leading-tight">{row.namaGelara}</h3>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mt-1">Peringkat #{idx + 1}</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelectGelara(row);
+          <div
+            style={{
+              height: `${mobileRowVirtualizer.getTotalSize()}px`,
+              width: "100%",
+              position: "relative",
+            }}
+          >
+            {mobileRowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const row = filteredSummaries[virtualRow.index];
+              const idx = virtualRow.index;
+              return (
+                <div
+                  key={row.namaGelara}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${virtualRow.start}px)`,
+                    paddingBottom: "16px",
                   }}
-                  className="rounded-lg bg-ink px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-paper-raised active:scale-95 transition-transform"
                 >
-                  Detail
-                </button>
-              </div>
+                  <div
+                    onClick={() => onSelectGelara(row)}
+                    className="rounded-2xl border border-line/50 bg-white/40 dark:bg-ink/10 p-5 shadow-sm space-y-4 cursor-pointer hover:scale-[1.01] hover:shadow-md transition-all backdrop-blur-sm h-full"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-teal-soft/80 border border-teal/20 text-sm font-bold text-teal shadow-sm">
+                          {row.namaGelara.trim()?.[0]?.toUpperCase()}
+                        </span>
+                        <div>
+                          <h3 className="text-sm font-bold text-ink leading-tight">{row.namaGelara}</h3>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mt-1">Peringkat #{idx + 1}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelectGelara(row);
+                        }}
+                        className="rounded-lg bg-ink px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-paper-raised active:scale-95 transition-transform"
+                      >
+                        Detail
+                      </button>
+                    </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-4 border-t border-line/50">
-                
-                {/* Mingguan */}
-                <div className="rounded-xl border border-line/50 bg-paper-raised/60 dark:bg-ink/10 p-3 flex flex-col justify-between shadow-sm">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mb-2">Mingguan</p>
-                  
-                  <div className="mb-3">
-                    <span className="text-3xl font-black text-teal tracking-tighter">
-                      {row.progressMingguan !== null ? `${row.progressMingguan.toFixed(1)}%` : "—"}
-                    </span>
-                  </div>
+                    <div className="grid grid-cols-2 gap-3 pt-4 border-t border-line/50">
+                      
+                      {/* Mingguan */}
+                      <div className="rounded-xl border border-line/50 bg-paper-raised/60 dark:bg-ink/10 p-3 flex flex-col justify-between shadow-sm">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mb-2">Mingguan</p>
+                        
+                        <div className="mb-3">
+                          <span className="text-3xl font-black text-teal tracking-tighter">
+                            {row.progressMingguan !== null ? `${row.progressMingguan.toFixed(1)}%` : "—"}
+                          </span>
+                        </div>
 
-                  <div className="flex flex-wrap gap-1.5 mt-auto">
-                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold ${row.jumlahAMingguan > 0 ? "bg-clay-soft/80 text-clay" : "bg-paper text-ink-soft border border-line/50"}`}>
-                      {row.jumlahAMingguan} A
-                    </span>
-                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold ${row.jumlahSMingguan ? "bg-amber-soft/80 text-amber-700 dark:text-amber-400" : "bg-paper text-ink-soft border border-line/50"}`}>
-                      {row.jumlahSMingguan || 0} S
-                    </span>
-                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold ${row.jumlahIMingguan ? "bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400" : "bg-paper text-ink-soft border border-line/50"}`}>
-                      {row.jumlahIMingguan || 0} I
-                    </span>
+                        <div className="flex flex-wrap gap-1.5 mt-auto">
+                          <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold ${row.jumlahAMingguan > 0 ? "bg-clay-soft/80 text-clay" : "bg-paper text-ink-soft border border-line/50"}`}>
+                            {row.jumlahAMingguan} A
+                          </span>
+                          <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold ${row.jumlahSMingguan ? "bg-amber-soft/80 text-amber-700 dark:text-amber-400" : "bg-paper text-ink-soft border border-line/50"}`}>
+                            {row.jumlahSMingguan || 0} S
+                          </span>
+                          <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold ${row.jumlahIMingguan ? "bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400" : "bg-paper text-ink-soft border border-line/50"}`}>
+                            {row.jumlahIMingguan || 0} I
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Bulanan */}
+                      <div className="rounded-xl border border-line/50 bg-paper-raised/60 dark:bg-ink/10 p-3 flex flex-col justify-between shadow-sm">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mb-2">Bulanan</p>
+                        
+                        <div className="mb-3">
+                          <span className="text-3xl font-black text-teal tracking-tighter">
+                            {row.progressBulanan !== null ? `${row.progressBulanan.toFixed(1)}%` : "—"}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap gap-1.5 mt-auto">
+                          <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold ${row.jumlahABulanan > 0 ? "bg-clay-soft/80 text-clay" : "bg-paper text-ink-soft border border-line/50"}`}>
+                            {row.jumlahABulanan} A
+                          </span>
+                          <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold ${row.jumlahSBulanan ? "bg-amber-soft/80 text-amber-700 dark:text-amber-400" : "bg-paper text-ink-soft border border-line/50"}`}>
+                            {row.jumlahSBulanan || 0} S
+                          </span>
+                          <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold ${row.jumlahIBulanan ? "bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400" : "bg-paper text-ink-soft border border-line/50"}`}>
+                            {row.jumlahIBulanan || 0} I
+                          </span>
+                        </div>
+                      </div>
+
+                    </div>
                   </div>
                 </div>
-
-                {/* Bulanan */}
-                <div className="rounded-xl border border-line/50 bg-paper-raised/60 dark:bg-ink/10 p-3 flex flex-col justify-between shadow-sm">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mb-2">Bulanan</p>
-                  
-                  <div className="mb-3">
-                    <span className="text-3xl font-black text-teal tracking-tighter">
-                      {row.progressBulanan !== null ? `${row.progressBulanan.toFixed(1)}%` : "—"}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-wrap gap-1.5 mt-auto">
-                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold ${row.jumlahABulanan > 0 ? "bg-clay-soft/80 text-clay" : "bg-paper text-ink-soft border border-line/50"}`}>
-                      {row.jumlahABulanan} A
-                    </span>
-                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold ${row.jumlahSBulanan ? "bg-amber-soft/80 text-amber-700 dark:text-amber-400" : "bg-paper text-ink-soft border border-line/50"}`}>
-                      {row.jumlahSBulanan || 0} S
-                    </span>
-                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold ${row.jumlahIBulanan ? "bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400" : "bg-paper text-ink-soft border border-line/50"}`}>
-                      {row.jumlahIBulanan || 0} I
-                    </span>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          ))
+              );
+            })}
+          </div>
         )}
       </div>
     </div>
