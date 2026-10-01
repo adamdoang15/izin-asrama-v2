@@ -23,6 +23,7 @@ export default function UserMenu({
   berandaHref?: string;
   dailyActivityHref?: string;
   kelolaAkunHref?: string;
+  showEkspor?: boolean;
   onSignOut: () => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
