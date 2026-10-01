@@ -60,6 +60,13 @@ function DailyActivityGelaraView({
   const [selectedWeekId, setSelectedWeekId] = useState(initialData.selectedWeekId);
   const [periodTab, setPeriodTab] = useState<"mingguan" | "bulanan">("mingguan");
 
+  function handleFilterChange(params: { weekId?: string; monthId?: string }) {
+    const sp = new URLSearchParams();
+    if (params.weekId) sp.set("week", params.weekId);
+    if (params.monthId) sp.set("month", params.monthId);
+    router.push(`/daily-activity?${sp.toString()}`);
+  }
+
   const currentWeek =
     initialData.weeks.find((w) => w.id === selectedWeekId) || initialData.weeks[0];
 
@@ -126,31 +133,43 @@ function DailyActivityGelaraView({
         </div>
       </div>
 
-      {/* Selector Minggu (jika tab Mingguan aktif) */}
-      {periodTab === "mingguan" && initialData.weeks.length > 1 && (
-        <div className="flex items-center glass-panel !rounded-xl p-1.5 md:p-2 gap-2 md:gap-4 w-full md:w-max max-w-full shadow-sm overflow-hidden">
-          <label htmlFor="gelara-week-select" className="shrink-0 text-[10px] md:text-xs font-bold uppercase tracking-widest text-ink-soft pl-2 md:pl-3">
-            Periode
+      {/* Selector Periode (Bulan & Minggu) */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full md:w-max">
+        <div className="flex flex-col sm:flex-row sm:items-center bg-paper-raised/60 dark:bg-ink/5 p-2 md:p-3 rounded-2xl border border-line/50 gap-3 shadow-sm max-w-full">
+          <label className="shrink-0 text-[10px] md:text-xs font-bold uppercase tracking-widest text-ink-soft pl-2">
+            Pilih Periode:
           </label>
-          <select
-            id="gelara-week-select"
-            value={selectedWeekId}
-            onChange={(e) => {
-              setSelectedWeekId(e.target.value);
-              const sp = new URLSearchParams();
-              sp.set("week", e.target.value);
-              router.push(`/daily-activity?${sp.toString()}`);
-            }}
-            className="flex-1 min-w-0 w-full text-ellipsis rounded-lg bg-white/40 dark:bg-ink/10 border border-line/50 md:bg-transparent md:border-none px-3 py-2 text-xs md:text-sm font-bold text-ink outline-none focus:ring-0 cursor-pointer hover:bg-ink/5 dark:hover:bg-paper-raised transition-colors"
-          >
-            {initialData.weeks.map((w) => (
-              <option key={w.id} value={w.id} className="bg-paper text-ink font-medium">
-                {w.label}
-              </option>
-            ))}
-          </select>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <select
+              value={initialData.selectedMonthId}
+              onChange={(e) => handleFilterChange({ monthId: e.target.value, weekId: initialData.selectedWeekId })}
+              className="w-full sm:w-auto rounded-xl border border-ink/10 dark:border-line bg-white/60 dark:bg-ink/10 px-4 py-2.5 text-sm font-medium text-ink outline-none focus:border-ink dark:focus:border-teal focus:ring-1 focus:ring-ink dark:focus:ring-teal/50 transition-all cursor-pointer hover:bg-white dark:hover:bg-ink/20"
+            >
+              {initialData.availableMonths.map((m) => (
+                <option key={m.id} value={m.id} className="bg-paper text-ink font-medium">
+                  {m.label}
+                </option>
+              ))}
+            </select>
+            {periodTab === "mingguan" && initialData.weeks.length > 0 && (
+              <select
+                value={selectedWeekId}
+                onChange={(e) => {
+                  setSelectedWeekId(e.target.value);
+                  handleFilterChange({ weekId: e.target.value, monthId: initialData.selectedMonthId });
+                }}
+                className="w-full sm:w-auto rounded-xl border border-ink/10 dark:border-line bg-white/60 dark:bg-ink/10 px-4 py-2.5 text-sm font-medium text-ink outline-none focus:border-ink dark:focus:border-teal focus:ring-1 focus:ring-ink dark:focus:ring-teal/50 transition-all cursor-pointer hover:bg-white dark:hover:bg-ink/20"
+              >
+                {initialData.weeks.map((w) => (
+                  <option key={w.id} value={w.id} className="bg-paper text-ink font-medium">
+                    {w.label}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
         </div>
-      )}
+      </div>
 
       {/* Progress Cards: Persentase Pelanggaran */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
