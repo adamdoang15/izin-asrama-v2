@@ -344,52 +344,61 @@ function DailyActivityPengurusView({
     initialData.weeks.find((w) => w.id === initialData.selectedWeekId) ||
     initialData.weeks[0];
 
-  const validWeekly = initialData.gelaraSummaries.filter(
-    (s) => s.progressMingguan !== null
-  );
-  const avgWeeklyProgress =
-    validWeekly.length > 0
-      ? Number((
-        validWeekly.reduce((acc, s) => acc + (s.progressMingguan ?? 0), 0) /
-        validWeekly.length
-      ).toFixed(1))
-      : null;
+  const {
+    avgWeeklyProgress,
+    avgMonthlyProgress,
+    totalWeeklyA,
+    totalWeeklyS,
+    totalWeeklyI,
+    totalMonthlyA,
+    totalMonthlyS,
+    totalMonthlyI,
+  } = useMemo(() => {
+    const validWeekly = initialData.gelaraSummaries.filter((s) => s.progressMingguan !== null);
+    const avgWeekly =
+      validWeekly.length > 0
+        ? Number(
+            (
+              validWeekly.reduce((acc, s) => acc + (s.progressMingguan ?? 0), 0) /
+              validWeekly.length
+            ).toFixed(1)
+          )
+        : null;
 
-  const validMonthly = initialData.gelaraSummaries.filter(
-    (s) => s.progressBulanan !== null
-  );
-  const avgMonthlyProgress =
-    validMonthly.length > 0
-      ? Number((
-        validMonthly.reduce((acc, s) => acc + (s.progressBulanan ?? 0), 0) /
-        validMonthly.length
-      ).toFixed(1))
-      : null;
+    const validMonthly = initialData.gelaraSummaries.filter((s) => s.progressBulanan !== null);
+    const avgMonthly =
+      validMonthly.length > 0
+        ? Number(
+            (
+              validMonthly.reduce((acc, s) => acc + (s.progressBulanan ?? 0), 0) /
+              validMonthly.length
+            ).toFixed(1)
+          )
+        : null;
 
-  const totalWeeklyA = initialData.gelaraSummaries.reduce(
-    (acc, s) => acc + s.jumlahAMingguan,
-    0
-  );
-  const totalMonthlyA = initialData.gelaraSummaries.reduce(
-    (acc, s) => acc + s.jumlahABulanan,
-    0
-  );
-  const totalWeeklyS = initialData.gelaraSummaries.reduce(
-    (acc, s) => acc + (s.jumlahSMingguan || 0),
-    0
-  );
-  const totalWeeklyI = initialData.gelaraSummaries.reduce(
-    (acc, s) => acc + (s.jumlahIMingguan || 0),
-    0
-  );
-  const totalMonthlyS = initialData.gelaraSummaries.reduce(
-    (acc, s) => acc + (s.jumlahSBulanan || 0),
-    0
-  );
-  const totalMonthlyI = initialData.gelaraSummaries.reduce(
-    (acc, s) => acc + (s.jumlahIBulanan || 0),
-    0
-  );
+    let wA = 0, wS = 0, wI = 0;
+    let mA = 0, mS = 0, mI = 0;
+
+    initialData.gelaraSummaries.forEach((s) => {
+      wA += s.jumlahAMingguan;
+      wS += s.jumlahSMingguan || 0;
+      wI += s.jumlahIMingguan || 0;
+      mA += s.jumlahABulanan;
+      mS += s.jumlahSBulanan || 0;
+      mI += s.jumlahIBulanan || 0;
+    });
+
+    return {
+      avgWeeklyProgress: avgWeekly,
+      avgMonthlyProgress: avgMonthly,
+      totalWeeklyA: wA,
+      totalWeeklyS: wS,
+      totalWeeklyI: wI,
+      totalMonthlyA: mA,
+      totalMonthlyS: mS,
+      totalMonthlyI: mI,
+    };
+  }, [initialData.gelaraSummaries]);
 
   // Placeholder untuk tahunan
   const dummyYearlyProgress = 92.5;
@@ -410,6 +419,47 @@ function DailyActivityPengurusView({
     if (params.gelara) sp.set("gelara", params.gelara);
     router.push(`/daily-activity?${sp.toString()}`);
   }
+
+  const handleDownloadExcel = async () => {
+    try {
+      const XLSX = await import("xlsx");
+      
+      const reportTitle = `LAPORAN BULAN ${initialData.month.label.toUpperCase()}`;
+      
+      const aoaData: any[][] = [
+        [reportTitle],
+        [], // Baris kosong untuk jarak
+        ["No.", "Nama Gelara", "Progress Bulanan", "Progress Alfa Bulanan"] // Header tabel
+      ];
+
+      initialData.gelaraSummaries.forEach((s, index) => {
+        const persenAlphaBulanan = s.totalTercatatBulanan > 0
+          ? Number(((s.jumlahABulanan / s.totalTercatatBulanan) * 100).toFixed(1))
+          : null;
+
+        aoaData.push([
+          index + 1,
+          s.namaGelara,
+          s.progressBulanan !== null ? `${s.progressBulanan}%` : "-",
+          persenAlphaBulanan !== null ? `${persenAlphaBulanan}%` : "-",
+        ]);
+      });
+
+      const worksheet = XLSX.utils.aoa_to_sheet(aoaData);
+      
+      // Merge cell judul dari kolom A sampai D (indeks 0 - 3) pada baris pertama (indeks 0)
+      worksheet["!merges"] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }
+      ];
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Rincian Gelara");
+      
+      const fileName = `Laporan_Aktivitas_${initialData.month.label.replace(/\s+/g, "_")}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+    } catch (error) {
+      console.error("Failed to export to Excel", error);
+    }
+  };
 
   return (
     <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-12 md:py-20 space-y-12 relative z-10">
@@ -508,8 +558,22 @@ function DailyActivityPengurusView({
             <h2 className="text-3xl font-bold tracking-tight text-ink">Rincian Gelara</h2>
           </div>
           
-          <div className="bg-paper-raised/60 dark:bg-ink/5 p-3 rounded-2xl border border-line/50 flex flex-col sm:flex-row sm:items-center gap-3 shadow-sm w-full md:w-auto">
-            <label className="text-[10px] font-bold uppercase tracking-widest text-ink-soft whitespace-nowrap pl-2">Pilih Periode:</label>
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+            <button
+              onClick={handleDownloadExcel}
+              className="group flex items-center justify-center gap-2 rounded-xl border border-ink/20 dark:border-line bg-transparent px-4 py-2.5 text-sm font-semibold text-ink transition-all hover:border-ink hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-ink/50 w-full sm:w-auto"
+              title="Download Excel"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-70 group-hover:opacity-100 transition-opacity">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" x2="12" y1="15" y2="3" />
+              </svg>
+              <span>Download Excel</span>
+            </button>
+
+            <div className="bg-paper-raised/60 dark:bg-ink/5 p-3 rounded-2xl border border-line/50 flex flex-col sm:flex-row sm:items-center gap-3 shadow-sm w-full md:w-auto">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-ink-soft whitespace-nowrap pl-2">Pilih Periode:</label>
             <div className="flex gap-2 w-full sm:w-auto">
               <select
                 value={initialData.selectedMonthId}
@@ -530,6 +594,7 @@ function DailyActivityPengurusView({
                 ))}
               </select>
             </div>
+          </div>
           </div>
         </div>
         <div className="rounded-xl overflow-hidden border border-line/50">
