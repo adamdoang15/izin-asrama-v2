@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type {
   AbsentActivityRecord,
@@ -41,6 +41,7 @@ function DailyActivityGelaraView({
   userName: string;
 }) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   // Find gelara data matching the logged-in user.
   // Tidak ada fallback ke index[0] — jika tidak cocok, tampilkan pesan "tidak ditemukan"
@@ -64,7 +65,10 @@ function DailyActivityGelaraView({
     const sp = new URLSearchParams();
     if (params.weekId) sp.set("week", params.weekId);
     if (params.monthId) sp.set("month", params.monthId);
-    router.push(`/daily-activity?${sp.toString()}`);
+    
+    startTransition(() => {
+      router.push(`/daily-activity?${sp.toString()}`);
+    });
   }
 
   const currentWeek =
@@ -121,7 +125,7 @@ function DailyActivityGelaraView({
       : null;
 
   return (
-    <main className="flex-1 max-w-4xl mx-auto w-full px-6 py-12 md:py-20 space-y-10 md:space-y-12 relative z-10">
+    <main className={`flex-1 max-w-4xl mx-auto w-full px-6 py-12 md:py-20 space-y-10 md:space-y-12 relative z-10 transition-all duration-500 ${isPending ? "opacity-50 pointer-events-none cursor-wait" : "opacity-100"}`}>
       <div className="max-w-3xl flex flex-col items-start gap-6">
         <div>
           <h1 className="text-5xl md:text-7xl font-bold tracking-tighter text-ink leading-tight">
@@ -336,6 +340,7 @@ function DailyActivityPengurusView({
   initialData: DailyActivityDataResult;
 }) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [selectedGelaraForDetail, setSelectedGelaraForDetail] =
     useState<GelaraSummary | null>(null);
   const [overviewTab, setOverviewTab] = useState<"mingguan" | "bulanan" | "tahunan">("mingguan");
@@ -358,22 +363,22 @@ function DailyActivityPengurusView({
     const avgWeekly =
       validWeekly.length > 0
         ? Number(
-            (
-              validWeekly.reduce((acc, s) => acc + (s.progressMingguan ?? 0), 0) /
-              validWeekly.length
-            ).toFixed(1)
-          )
+          (
+            validWeekly.reduce((acc, s) => acc + (s.progressMingguan ?? 0), 0) /
+            validWeekly.length
+          ).toFixed(1)
+        )
         : null;
 
     const validMonthly = initialData.gelaraSummaries.filter((s) => s.progressBulanan !== null);
     const avgMonthly =
       validMonthly.length > 0
         ? Number(
-            (
-              validMonthly.reduce((acc, s) => acc + (s.progressBulanan ?? 0), 0) /
-              validMonthly.length
-            ).toFixed(1)
-          )
+          (
+            validMonthly.reduce((acc, s) => acc + (s.progressBulanan ?? 0), 0) /
+            validMonthly.length
+          ).toFixed(1)
+        )
         : null;
 
     let wA = 0, wS = 0, wI = 0;
@@ -417,15 +422,18 @@ function DailyActivityPengurusView({
     if (params.monthId) sp.set("month", params.monthId);
     if (params.date) sp.set("date", params.date);
     if (params.gelara) sp.set("gelara", params.gelara);
-    router.push(`/daily-activity?${sp.toString()}`);
+    
+    startTransition(() => {
+      router.push(`/daily-activity?${sp.toString()}`);
+    });
   }
 
   const handleDownloadExcel = async () => {
     try {
       const XLSX = await import("xlsx");
-      
+
       const reportTitle = `LAPORAN BULAN ${initialData.month.label.toUpperCase()}`;
-      
+
       const aoaData: any[][] = [
         [reportTitle],
         [], // Baris kosong untuk jarak
@@ -446,14 +454,14 @@ function DailyActivityPengurusView({
       });
 
       const worksheet = XLSX.utils.aoa_to_sheet(aoaData);
-      
+
       // Merge cell judul dari kolom A sampai D (indeks 0 - 3) pada baris pertama (indeks 0)
       worksheet["!merges"] = [
         { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } }
       ];
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Rincian Gelara");
-      
+
       const fileName = `Laporan_Aktivitas_${initialData.month.label.replace(/\s+/g, "_")}.xlsx`;
       XLSX.writeFile(workbook, fileName);
     } catch (error) {
@@ -462,7 +470,7 @@ function DailyActivityPengurusView({
   };
 
   return (
-    <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-12 md:py-20 space-y-12 relative z-10">
+    <main className={`flex-1 max-w-6xl mx-auto w-full px-6 py-12 md:py-20 space-y-12 relative z-10 transition-all duration-500 ${isPending ? "opacity-50 pointer-events-none cursor-wait" : "opacity-100"}`}>
 
       {/* Page Header */}
       <div className="max-w-3xl flex flex-col items-start gap-6">
@@ -481,17 +489,16 @@ function DailyActivityPengurusView({
       {/* Overview Stat Cards */}
       <section className="glass-panel p-8 md:p-10 shadow-sm flex flex-col gap-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-line/50 pb-4">
-          <h2 className="text-xl font-bold tracking-tight text-ink">Ringkasan Eksekutif</h2>
+          <h2 className="text-xl font-bold tracking-tight text-ink">Ringkasan</h2>
           <div className="flex rounded-xl bg-paper-raised/40 dark:bg-ink/10 p-1 border border-line/50 w-fit">
             {(["mingguan", "bulanan", "tahunan"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setOverviewTab(tab)}
-                className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all ${
-                  overviewTab === tab
+                className={`px-4 py-2 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all ${overviewTab === tab
                     ? "bg-ink text-paper-raised shadow-md"
                     : "text-ink-soft hover:bg-white/40 hover:text-ink"
-                }`}
+                  }`}
               >
                 {tab}
               </button>
@@ -557,7 +564,7 @@ function DailyActivityPengurusView({
             <h2 className="text-[10px] font-bold uppercase tracking-widest text-ink-soft mb-1">Data</h2>
             <h2 className="text-3xl font-bold tracking-tight text-ink">Rincian Gelara</h2>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
             <button
               onClick={handleDownloadExcel}
@@ -574,27 +581,27 @@ function DailyActivityPengurusView({
 
             <div className="bg-paper-raised/60 dark:bg-ink/5 p-3 rounded-2xl border border-line/50 flex flex-col sm:flex-row sm:items-center gap-3 shadow-sm w-full md:w-auto">
               <label className="text-[10px] font-bold uppercase tracking-widest text-ink-soft whitespace-nowrap pl-2">Pilih Periode:</label>
-            <div className="flex gap-2 w-full sm:w-auto">
-              <select
-                value={initialData.selectedMonthId}
-                onChange={(e) => handleFilterChange({ monthId: e.target.value, weekId: initialData.selectedWeekId })}
-                className="w-full sm:w-auto rounded-xl border border-ink/10 dark:border-line bg-white/60 dark:bg-ink/10 px-4 py-2.5 text-sm font-medium text-ink outline-none focus:border-ink dark:focus:border-teal focus:ring-1 focus:ring-ink dark:focus:ring-teal/50 transition-all cursor-pointer hover:bg-white dark:hover:bg-ink/20"
-              >
-                {initialData.availableMonths.map((m) => (
-                  <option key={m.id} value={m.id} className="bg-paper text-ink font-medium">{m.label}</option>
-                ))}
-              </select>
-              <select
-                value={initialData.selectedWeekId}
-                onChange={(e) => handleFilterChange({ weekId: e.target.value, monthId: initialData.selectedMonthId })}
-                className="w-full sm:w-auto rounded-xl border border-ink/10 dark:border-line bg-white/60 dark:bg-ink/10 px-4 py-2.5 text-sm font-medium text-ink outline-none focus:border-ink dark:focus:border-teal focus:ring-1 focus:ring-ink dark:focus:ring-teal/50 transition-all cursor-pointer hover:bg-white dark:hover:bg-ink/20"
-              >
-                {initialData.weeks.map((w) => (
-                  <option key={w.id} value={w.id} className="bg-paper text-ink font-medium">{w.label}</option>
-                ))}
-              </select>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <select
+                  value={initialData.selectedMonthId}
+                  onChange={(e) => handleFilterChange({ monthId: e.target.value, weekId: initialData.selectedWeekId })}
+                  className="w-full sm:w-auto rounded-xl border border-ink/10 dark:border-line bg-white/60 dark:bg-ink/10 px-4 py-2.5 text-sm font-medium text-ink outline-none focus:border-ink dark:focus:border-teal focus:ring-1 focus:ring-ink dark:focus:ring-teal/50 transition-all cursor-pointer hover:bg-white dark:hover:bg-ink/20"
+                >
+                  {initialData.availableMonths.map((m) => (
+                    <option key={m.id} value={m.id} className="bg-paper text-ink font-medium">{m.label}</option>
+                  ))}
+                </select>
+                <select
+                  value={initialData.selectedWeekId}
+                  onChange={(e) => handleFilterChange({ weekId: e.target.value, monthId: initialData.selectedMonthId })}
+                  className="w-full sm:w-auto rounded-xl border border-ink/10 dark:border-line bg-white/60 dark:bg-ink/10 px-4 py-2.5 text-sm font-medium text-ink outline-none focus:border-ink dark:focus:border-teal focus:ring-1 focus:ring-ink dark:focus:ring-teal/50 transition-all cursor-pointer hover:bg-white dark:hover:bg-ink/20"
+                >
+                  {initialData.weeks.map((w) => (
+                    <option key={w.id} value={w.id} className="bg-paper text-ink font-medium">{w.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
           </div>
         </div>
         <div className="rounded-xl overflow-hidden border border-line/50">

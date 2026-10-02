@@ -838,12 +838,9 @@ export async function getDailyActivityData(params?: {
   // Apply filters to absent list if specified
   if (params?.date) {
     absentRecordsRaw = absentRecordsRaw.filter((r) => r.tanggal === params.date);
-  } else if (params?.weekId) {
-    absentRecordsRaw = absentRecordsRaw.filter(
-      (r) => r.tanggal >= currentWeek.startDate && r.tanggal <= currentWeek.endDate
-    );
-  } else if (params?.monthId) {
-    absentRecordsRaw = absentRecordsRaw.filter((r) => r.tanggal.startsWith(params.monthId!));
+  } else {
+    // Selalu kembalikan data 1 bulan penuh agar tab client bisa berpindah antar Mingguan & Bulanan
+    absentRecordsRaw = absentRecordsRaw.filter((r) => r.tanggal.startsWith(monthId));
   }
 
   if (params?.gelara) {
