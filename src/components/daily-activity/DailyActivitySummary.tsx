@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useRef } from "react";
 import type { GelaraSummary } from "@/services/daily-activity.service";
-import { SearchIcon } from "./icons";
+import { SearchIcon } from "../icons";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 type SortKey =
