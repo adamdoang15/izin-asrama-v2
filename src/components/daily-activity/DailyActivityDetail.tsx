@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { AbsentActivityRecord, GelaraSummary, WeekPeriod } from "@/services/daily-activity.service";
 import dynamic from "next/dynamic";
 
-const SPPDFDownloadButton = dynamic(() => import("./SPPDFDownloadButton"), {
+const SPPDFDownloadButton = dynamic(() => import("../SPPDFDownloadButton"), {
   ssr: false,
 });
 

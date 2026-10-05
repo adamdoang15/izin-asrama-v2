@@ -252,6 +252,59 @@ export async function checkActiveIzinConflict(
   return { hasConflict: (activeRequests ?? []).length > 0 };
 }
 
+export async function checkBannedSunday(userId: number, tanggal_keluar: string): Promise<{ error?: string }> {
+  const { year: outYear, month: outMonth, day: outDayDate } = jakartaDateParts(tanggal_keluar);
+  const outDayOfWeek = new Date(Date.UTC(outYear, outMonth - 1, outDayDate)).getDay(); // 0 = Minggu
+  
+  if (outDayOfWeek === 0) {
+    const startOfPrevMonth = new Date(Date.UTC(outYear, outMonth - 2, 1) - (7 * 60 * 60 * 1000)).toISOString();
+    const endOfMonth = new Date(Date.UTC(outYear, outMonth, 1) - (7 * 60 * 60 * 1000)).toISOString();
+
+    const { data: lates, error: latesError } = await supabase
+      .from("izin")
+      .select("returned_at")
+      .eq("user_id", userId)
+      .eq("return_status", "TERLAMBAT")
+      .gte("returned_at", startOfPrevMonth)
+      .lt("returned_at", endOfMonth)
+      .order("returned_at", { ascending: true });
+
+    if (!latesError && lates && lates.length > 0) {
+      const latesByMonth: Record<string, any[]> = {};
+      for (const late of lates) {
+        if (!late.returned_at) continue;
+        const { year, month } = jakartaDateParts(late.returned_at);
+        const key = `${year}-${month}`;
+        if (!latesByMonth[key]) latesByMonth[key] = [];
+        latesByMonth[key].push(late);
+      }
+
+      const bannedSundays: string[] = [];
+      for (const key in latesByMonth) {
+        const monthlyLates = latesByMonth[key];
+        for (let i = 2; i < monthlyLates.length; i += 3) {
+          const lateDateStr = monthlyLates[i].returned_at;
+          const { year: lateY, month: lateM, day: lateD } = jakartaDateParts(lateDateStr);
+          const lateDateObj = new Date(Date.UTC(lateY, lateM - 1, lateD));
+          const lateDayOfWeek = lateDateObj.getDay();
+
+          const daysUntilSunday = lateDayOfWeek === 0 ? 7 : 7 - lateDayOfWeek;
+          const bannedSundayObj = new Date(lateDateObj.getTime() + (daysUntilSunday * 86400000));
+          
+          const bannedSundayStr = `${bannedSundayObj.getUTCFullYear()}-${String(bannedSundayObj.getUTCMonth() + 1).padStart(2, '0')}-${String(bannedSundayObj.getUTCDate()).padStart(2, '0')}`;
+          bannedSundays.push(bannedSundayStr);
+        }
+      }
+
+      const outDateStr = `${outYear}-${String(outMonth).padStart(2, '0')}-${String(outDayDate).padStart(2, '0')}`;
+      if (bannedSundays.includes(outDateStr)) {
+        return { error: `Pengajuan ditolak: Anda tidak dapat mengajukan izin untuk hari Minggu ini karena akumulasi keterlambatan Anda mencapai kelipatan 3 kali pada minggu tersebut.` };
+      }
+    }
+  }
+  return {};
+}
+
 export async function createIzin(
   userId: number,
   jenis_izin: JenisIzin,
@@ -283,21 +336,26 @@ export async function createIzin(
     return { error: `Anda sedang diblacklist${untilText} dan tidak dapat mengajukan izin keluar${reasonText}.` };
   }
 
+  const bannedSundayCheck = await checkBannedSunday(userId, tanggal_keluar);
+  if (bannedSundayCheck.error) {
+    return { error: bannedSundayCheck.error };
+  }
+
   // Cek blacklist otomatis akhir pekan (Sabtu/Minggu) jika pelanggaran > 10%
   const outDate = new Date(tanggal_keluar);
   const outDay = outDate.getDay(); // 0 = Minggu, 6 = Sabtu
-  
+
   if (outDay === 0 || outDay === 6) {
     try {
       if (user?.name) {
         const activityData = await getDailyActivityData();
         const gelara = activityData.gelaraSummaries.find(g => g.namaGelara === user.name);
-        
+
         if (gelara && gelara.totalTercatatMingguan > 0) {
           const persenPelanggaran = (gelara.jumlahAMingguan / gelara.totalTercatatMingguan) * 100;
           if (persenPelanggaran > 10) {
-            return { 
-              error: `Pengajuan ditolak: Anda tidak dapat mengajukan izin untuk hari Sabtu/Minggu karena tingkat pelanggaran (Alfa) Anda minggu ini mencapai ${persenPelanggaran.toFixed(1)}% (Maksimal 10%).` 
+            return {
+              error: `Pengajuan ditolak: Anda tidak dapat mengajukan izin untuk hari Sabtu/Minggu karena tingkat pelanggaran (Alfa) Anda minggu ini mencapai ${persenPelanggaran.toFixed(1)}% (Maksimal 10%).`
             };
           }
         }
@@ -508,6 +566,11 @@ export async function submitIzinRevision(
   if (beforeError || !before) return { error: "Pengajuan tidak ditemukan." };
   if (before.user_id !== userId) return { error: "Anda tidak memiliki akses ke pengajuan ini." };
   if (before.status !== "PERLU_REVISI") return { error: "Pengajuan ini tidak sedang menunggu revisi Anda." };
+
+  const bannedSundayCheck = await checkBannedSunday(userId, input.tanggal_keluar);
+  if (bannedSundayCheck.error) {
+    return { error: bannedSundayCheck.error };
+  }
 
   const { error } = await supabase
     .from("izin")
@@ -843,4 +906,4 @@ export async function markIzinReminded(id: number): Promise<void> {
   if (error) {
     console.error(`Gagal menandai reminded_at untuk izin #${id}:`, error.message);
   }
-}
+}
