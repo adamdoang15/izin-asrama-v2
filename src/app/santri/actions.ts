@@ -171,7 +171,9 @@ export async function tandaiKembaliAction(
 
   const izin = await getCurrentIzinStatus(id.data);
   if (!izin || izin.user_id !== Number(session.user.id)) return { error: "Izin tidak ditemukan." };
-  if (izin.status !== "SEDANG_KELUAR") return { error: "Izin ini belum berstatus sedang keluar." };
+  if (izin.status !== "SEDANG_KELUAR" && izin.status !== "DISETUJUI") {
+    return { error: "Izin ini belum berstatus sedang keluar atau disetujui." };
+  }
 
   const asrama = getAsramaConfig();
   const distance = getDistanceInMeters(userLat, userLng, asrama.lat, asrama.lng);

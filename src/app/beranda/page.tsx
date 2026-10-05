@@ -125,7 +125,7 @@ export async function BerandaSantri({ userId }: { userId: number }) {
                         <RevisiIzinForm izin={izin} />
                       </div>
                     )}
-                    {izin.status === "SEDANG_KELUAR" && (
+                    {(izin.status === "SEDANG_KELUAR" || izin.status === "DISETUJUI") && (
                       <div className="mt-6">
                         <ReturnIzinButton id={izin.id} />
                       </div>
