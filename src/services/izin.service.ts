@@ -272,6 +272,7 @@ export async function checkBannedSunday(userId: number, tanggal_keluar: string):
     if (!latesError && lates && lates.length > 0) {
       const latesByMonth: Record<string, any[]> = {};
       for (const late of lates) {
+        if (!late.returned_at) continue;
         const { year, month } = jakartaDateParts(late.returned_at);
         const key = `${year}-${month}`;
         if (!latesByMonth[key]) latesByMonth[key] = [];
