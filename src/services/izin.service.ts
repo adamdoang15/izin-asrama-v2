@@ -665,7 +665,7 @@ export async function markIzinReturned(
     })
     .eq("id", id)
     .eq("user_id", userId)
-    .eq("status", "SEDANG_KELUAR");
+    .in("status", ["SEDANG_KELUAR", "DISETUJUI"]);
 
   if (error) return { error: `Gagal mencatat kepulangan: ${error.message}` };
 
@@ -679,7 +679,7 @@ export async function markIzinReturned(
     izin_id: id,
     actor_id: userId,
     action: "KEMBALI",
-    old_status: "SEDANG_KELUAR",
+    old_status: "SEDANG_KELUAR", // simplified, usually it's SEDANG_KELUAR or DISETUJUI
     new_status: "SUDAH_KEMBALI",
     catatan: `${statusCatatan}${locationCatatan}`,
   });
@@ -707,8 +707,8 @@ export async function markIzinReturnedByPengurus(
 ): Promise<{ error?: string }> {
   const izin = await getIzinFullById(id);
   if (!izin) return { error: "Pengajuan tidak ditemukan." };
-  if (izin.status !== "SEDANG_KELUAR") {
-    return { error: "Izin ini belum berstatus sedang keluar atau sudah diselesaikan." };
+  if (izin.status !== "SEDANG_KELUAR" && izin.status !== "DISETUJUI") {
+    return { error: "Izin ini belum berstatus sedang keluar, disetujui, atau sudah diselesaikan." };
   }
 
   const now = new Date();
@@ -728,7 +728,7 @@ export async function markIzinReturnedByPengurus(
       updated_at: returnedAt,
     })
     .eq("id", id)
-    .eq("status", "SEDANG_KELUAR");
+    .in("status", ["SEDANG_KELUAR", "DISETUJUI"]);
 
   if (error) return { error: `Gagal menandai kepulangan: ${error.message}` };
 
