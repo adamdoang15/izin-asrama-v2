@@ -17,6 +17,7 @@ export type Database = {
           name: string
           role: "SANTRI" | "PENGURUS"
           kamar: string | null
+          kelas: string | null
           is_active: boolean
           is_blacklisted: boolean
           blacklist_reason: string | null
@@ -32,6 +33,7 @@ export type Database = {
           name: string
           role: "SANTRI" | "PENGURUS"
           kamar?: string | null
+          kelas?: string | null
           is_active?: boolean
           is_blacklisted?: boolean
           blacklist_reason?: string | null
@@ -47,6 +49,7 @@ export type Database = {
           name?: string
           role?: "SANTRI" | "PENGURUS"
           kamar?: string | null
+          kelas?: string | null
           is_active?: boolean
           is_blacklisted?: boolean
           blacklist_reason?: string | null

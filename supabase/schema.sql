@@ -8,6 +8,7 @@ create table if not exists public.users (
   name text not null,
   role text not null check (role in ('SANTRI', 'PENGURUS')),
   kamar text,
+  kelas text,
   is_active boolean not null default true,
   is_blacklisted boolean not null default false,
   blacklist_reason text,

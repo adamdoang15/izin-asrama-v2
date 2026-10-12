@@ -43,6 +43,7 @@ export default function AccountRow({ account, isSelf }: { account: UserRow; isSe
           <p className="text-sm text-ink-soft mt-0.5">
             @{account.username}
             {account.kamar ? ` · ${account.kamar}` : ""}
+            {account.kelas ? ` · Kelas ${account.kelas}` : ""}
           </p>
           <div className="flex items-center gap-3 text-xs mt-1">
             <span className={account.is_active ? "text-sage" : "text-clay"}>
@@ -88,14 +89,26 @@ export default function AccountRow({ account, isSelf }: { account: UserRow; isSe
                 />
               </div>
               {account.role === "SANTRI" && (
-                <div className="space-y-1.5">
-                  <label className="block text-sm font-medium">Kamar</label>
-                  <input
-                    name="kamar"
-                    defaultValue={account.kamar ?? ""}
-                    className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm"
-                  />
-                </div>
+                <>
+                  <div className="space-y-1.5">
+                    <label className="block text-sm font-medium">Kamar</label>
+                    <input
+                      name="kamar"
+                      defaultValue={account.kamar ?? ""}
+                      placeholder="Contoh: Kamar 8 Putra"
+                      className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-sm font-medium">Kelas</label>
+                    <input
+                      name="kelas"
+                      defaultValue={account.kelas ?? ""}
+                      placeholder="Contoh: 10, 11, 12, atau 7A"
+                      className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm"
+                    />
+                  </div>
+                </>
               )}
             </div>
             <div className="space-y-1.5">

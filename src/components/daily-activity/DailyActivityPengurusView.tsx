@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { DailyActivityDataResult, GelaraSummary } from "@/services/daily-activity.service";
 import DailyActivitySummary from "./DailyActivitySummary";
 import DailyActivityDetail from "./DailyActivityDetail";
+import KelasStatistikTable from "./KelasStatistikTable";
 
 export default function DailyActivityPengurusView({
   initialData,
@@ -134,6 +135,46 @@ export default function DailyActivityPengurusView({
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Rincian Gelara");
 
+      if (initialData.kelasStatistikBulanan && initialData.kelasStatistikBulanan.length > 0) {
+        const kelasAoa: any[][] = [
+          [`STATISTIK AKTIVITAS PER KELAS - ${initialData.month.label.toUpperCase()}`],
+          [],
+          [
+            "No.",
+            "Kelas",
+            "Jumlah Santri",
+            "Progress Sholat",
+            "Alpha Sholat",
+            "Sakit Sholat",
+            "Izin Sholat",
+            "Progress Keseluruhan",
+            "Alpha Total",
+            "Sakit Total",
+            "Izin Total",
+          ],
+        ];
+
+        initialData.kelasStatistikBulanan.forEach((k, idx) => {
+          kelasAoa.push([
+            idx + 1,
+            k.kelas === "Tanpa Kelas" ? "Tanpa Kelas" : `Kelas ${k.kelas}`,
+            k.jumlahSantri,
+            k.sholatProgress !== null ? `${k.sholatProgress}%` : "-",
+            k.sholatAlpha,
+            k.sholatSakit,
+            k.sholatIzin,
+            k.overallProgress !== null ? `${k.overallProgress}%` : "-",
+            k.overallAlpha,
+            k.overallSakit,
+            k.overallIzin,
+          ]);
+        });
+
+        const kelasSheet = XLSX.utils.aoa_to_sheet(kelasAoa);
+        kelasSheet["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 10 } }];
+        XLSX.utils.book_append_sheet(workbook, kelasSheet, "Statistik Kelas");
+      }
+
       const fileName = `Laporan_Aktivitas_${initialData.month.label.replace(/\s+/g, "_")}.xlsx`;
       XLSX.writeFile(workbook, fileName);
     } catch (error) {
@@ -228,6 +269,14 @@ export default function DailyActivityPengurusView({
           </div>
         </div>
       </section>
+
+      {/* Per-Class Statistics */}
+      <KelasStatistikTable
+        mingguanStats={initialData.kelasStatistikMingguan || []}
+        bulananStats={initialData.kelasStatistikBulanan || []}
+        selectedWeekLabel={currentWeek.label}
+        selectedMonthLabel={initialData.month.label}
+      />
 
       {/* Summary Table / Cards */}
       <section className="glass-panel p-8 md:p-10 shadow-sm overflow-hidden">
