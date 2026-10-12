@@ -93,17 +93,31 @@ export default function AccountForm() {
       </div>
 
       {role === "SANTRI" && (
-        <div className="space-y-1.5">
-          <label htmlFor="kamar" className="block text-sm font-medium">
-            Kamar
-          </label>
-          <input
-            id="kamar"
-            name="kamar"
-            type="text"
-            placeholder="Contoh: Kamar 8 Putra"
-            className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-teal focus:ring-1 focus:ring-teal transition-colors"
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label htmlFor="kamar" className="block text-sm font-medium">
+              Kamar
+            </label>
+            <input
+              id="kamar"
+              name="kamar"
+              type="text"
+              placeholder="Contoh: Kamar 8 Putra"
+              className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-teal focus:ring-1 focus:ring-teal transition-colors"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="kelas" className="block text-sm font-medium">
+              Kelas
+            </label>
+            <input
+              id="kelas"
+              name="kelas"
+              type="text"
+              placeholder="Contoh: 10, 11, 12, atau 7A"
+              className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-teal focus:ring-1 focus:ring-teal transition-colors"
+            />
+          </div>
         </div>
       )}
 

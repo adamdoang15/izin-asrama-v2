@@ -10,6 +10,8 @@
  * 5. Menangani caching, filter, dan error state dengan aman tanpa crash
  */
 
+import { supabase } from "@/lib/supabase";
+
 /**
  * Daftar sheet aktivitas hardcoded sebagai fallback
  * Digunakan jika auto-discovery via HTML scraping gagal
@@ -40,6 +42,31 @@ export const ACTIVITY_SHEETS = [
   "PENGUMPULAN HP",
   "OPSIH",
 ] as const;
+
+/** Sheet-sheet sholat berjamaah */
+export const SHOLAT_SHEETS = [
+  "SHOLAT SUBUH",
+  "SHOLAT DZUHUR",
+  "SHOLAT ASHAR",
+  "SHOLAT MAGHRIB",
+  "SHOLAT ISYA",
+] as const;
+
+export interface KelasStatistik {
+  kelas: string;
+  jumlahSantri: number;
+  santriNames: string[];
+  sholatProgress: number | null;
+  sholatTotalTercatat: number;
+  sholatAlpha: number;
+  sholatSakit: number;
+  sholatIzin: number;
+  overallProgress: number | null;
+  overallTotalTercatat: number;
+  overallAlpha: number;
+  overallSakit: number;
+  overallIzin: number;
+}
 
 export type ActivityName = string;
 
@@ -108,6 +135,8 @@ export interface DailyActivityDataResult {
   sheetNames: string[];
   sourceType: "google-sheet" | "excel" | "sample";
   lastUpdated: string;
+  kelasStatistikMingguan?: KelasStatistik[];
+  kelasStatistikBulanan?: KelasStatistik[];
 }
 
 // In-memory cache untuk records
@@ -567,7 +596,7 @@ export async function getRawDailyActivityRecords(targetMonthId?: string): Promis
 
   const sheetUrl = process.env.DAILY_ACTIVITY_SHEET_URL;
   const sheetMap = getConfiguredSheetMap();
-  
+
   let activePeriod = getActiveYearAndMonth();
   if (targetMonthId && /^\d{4}-\d{2}$/.test(targetMonthId)) {
     const [y, m] = targetMonthId.split("-").map((s) => parseInt(s, 10));
@@ -869,6 +898,114 @@ export async function getDailyActivityData(params?: {
   const totalActivitiesCount = records.length;
   const totalAbsentCount = records.filter((r) => r.status === "A").length;
 
+  // === Statistik Per Kelas ===
+  let santriUsers: { name: string; kelas: string | null }[] = [];
+  try {
+    const { data: usersData } = await supabase
+      .from("users")
+      .select("name, kelas")
+      .eq("role", "SANTRI")
+      .eq("is_active", true);
+    if (usersData) santriUsers = usersData;
+  } catch (err) {
+    console.warn("Gagal mengambil data user santri untuk statistik kelas:", err);
+  }
+
+  const userKeyToKelasMap = new Map<string, string>();
+  for (const u of santriUsers) {
+    if (u.kelas?.trim()) {
+      const k = u.kelas.trim();
+      userKeyToKelasMap.set(u.name.toLowerCase().replace(/\s+/g, ""), k);
+      userKeyToKelasMap.set(normalizeGelaraName(u.name).toLowerCase().replace(/\s+/g, ""), k);
+    }
+  }
+
+  const resolveKelas = (rawName: string): string => {
+    const key = rawName.toLowerCase().replace(/\s+/g, "");
+    if (userKeyToKelasMap.has(key)) return userKeyToKelasMap.get(key)!;
+    // Fallback toleransi jika nama di spreadsheet tidak mencantumkan nama belakang/marga
+    // (misal: "Muhammad Ichsan Alfiyan" vs "Muhammad Ichsan Alfiyan Hasibuan")
+    for (const [userKey, kelas] of userKeyToKelasMap.entries()) {
+      if (userKey.startsWith(key) || key.startsWith(userKey)) {
+        return kelas;
+      }
+    }
+    return "Tanpa Kelas";
+  };
+
+  const kelasToSantriMap = new Map<string, string[]>();
+  const allClassesSet = new Set<string>();
+
+  for (const u of santriUsers) {
+    if (u.kelas?.trim()) allClassesSet.add(u.kelas.trim());
+  }
+
+  allGelaraNames.forEach((nama) => {
+    const kelas = resolveKelas(nama);
+    if (kelas !== "Tanpa Kelas") allClassesSet.add(kelas);
+
+    const list = kelasToSantriMap.get(kelas) || [];
+    if (!list.includes(nama)) list.push(nama);
+    kelasToSantriMap.set(kelas, list);
+  });
+
+  const sortedClasses = Array.from(allClassesSet).sort((a, b) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" })
+  );
+  if ((kelasToSantriMap.get("Tanpa Kelas")?.length || 0) > 0) {
+    sortedClasses.push("Tanpa Kelas");
+  }
+
+  const getRecordKelas = (r: NormalizedActivityRecord): string => {
+    return resolveKelas(r.namaGelara);
+  };
+
+  const isSholat = (act: string) => (SHOLAT_SHEETS as readonly string[]).includes(act.trim().toUpperCase());
+
+  const calcStats = (recs: NormalizedActivityRecord[], k: string): KelasStatistik => {
+    const santriInClass = kelasToSantriMap.get(k) || [];
+    const sholatRecs = recs.filter((r) => isSholat(r.aktivitas));
+    const sholatTotal = sholatRecs.length;
+    const sholatAlpha = sholatRecs.filter((r) => r.status === "A").length;
+    const sholatSakit = sholatRecs.filter((r) => r.status === "S").length;
+    const sholatIzin = sholatRecs.filter((r) => r.status === "I").length;
+    const sholatAbsen = sholatAlpha + sholatSakit + sholatIzin;
+    const sholatProgress = sholatTotal > 0 ? Number((((sholatTotal - sholatAbsen) / sholatTotal) * 100).toFixed(1)) : null;
+
+    const overallTotal = recs.length;
+    const overallAlpha = recs.filter((r) => r.status === "A").length;
+    const overallSakit = recs.filter((r) => r.status === "S").length;
+    const overallIzin = recs.filter((r) => r.status === "I").length;
+    const overallAbsen = overallAlpha + overallSakit + overallIzin;
+    const overallProgress = overallTotal > 0 ? Number((((overallTotal - overallAbsen) / overallTotal) * 100).toFixed(1)) : null;
+
+    return {
+      kelas: k,
+      jumlahSantri: santriInClass.length,
+      santriNames: santriInClass,
+      sholatProgress,
+      sholatTotalTercatat: sholatTotal,
+      sholatAlpha,
+      sholatSakit,
+      sholatIzin,
+      overallProgress,
+      overallTotalTercatat: overallTotal,
+      overallAlpha,
+      overallSakit,
+      overallIzin,
+    };
+  };
+
+  const weekRecs = records.filter((r) => r.tanggal >= currentWeek.startDate && r.tanggal <= currentWeek.endDate);
+  const monthRecs = records.filter((r) => r.tanggal.startsWith(monthId));
+
+  const kelasStatistikMingguan: KelasStatistik[] = sortedClasses.map((k) =>
+    calcStats(weekRecs.filter((r) => getRecordKelas(r) === k), k)
+  );
+  const kelasStatistikBulanan: KelasStatistik[] = sortedClasses.map((k) =>
+    calcStats(monthRecs.filter((r) => getRecordKelas(r) === k), k)
+  );
+
   return {
     month: monthPeriod,
     availableMonths,
@@ -884,6 +1021,8 @@ export async function getDailyActivityData(params?: {
     sheetNames: activeSheetNames,
     sourceType,
     lastUpdated: new Date().toISOString(),
+    kelasStatistikMingguan,
+    kelasStatistikBulanan,
   };
 }
 
@@ -921,4 +1060,15 @@ export async function getGelaraDetail(
     absentWeekly,
     absentMonthly,
   };
+}
+
+export async function getStatistikPerKelas(params?: {
+  weekId?: string;
+  monthId?: string;
+  periode?: "mingguan" | "bulanan";
+}): Promise<KelasStatistik[]> {
+  const data = await getDailyActivityData({ weekId: params?.weekId, monthId: params?.monthId });
+  return params?.periode === "bulanan"
+    ? data.kelasStatistikBulanan || []
+    : data.kelasStatistikMingguan || [];
 }
