@@ -327,7 +327,7 @@ export default function SPPDFDocument({
           <View style={styles.pasalList}>
             <View style={styles.pasalItem}>
               <Text style={styles.pasalItemNumber}>(4)</Text>
-              <Text style={styles.pasalItemText}><Text style={styles.bold}>Penerima Beasiswa</Text> berkewajiban aktif mengikuti program LKP dengan perolehan nilai persentase minimum rata-rata 85 % (persen).</Text>
+              <Text style={styles.pasalItemText}><Text style={styles.bold}>Penerima Beasiswa</Text> berkewajiban aktif mengikuti program LKP dengan perolehan nilai persentase minimum rata-rata 90 % (persen).</Text>
             </View>
           </View>
 

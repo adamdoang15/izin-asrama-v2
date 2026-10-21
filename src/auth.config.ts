@@ -11,8 +11,10 @@ export const authConfig: NextAuthConfig = {
   pages: {
     signIn: "/login",
   },
+  useSecureCookies: process.env.NODE_ENV === "production",
   session: {
     strategy: "jwt",
+    maxAge: 6 * 60 * 60, // 6 jam
   },
   providers: [],
   callbacks: {
