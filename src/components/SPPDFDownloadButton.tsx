@@ -121,7 +121,7 @@ export default function SPPDFDownloadButton({
       disabled={isGenerating}
       className="inline-flex items-center gap-2 rounded-lg bg-teal px-4 py-2 text-xs font-semibold text-white hover:bg-teal-hover transition-colors disabled:opacity-50"
     >
-      Cetak SPB (&lt;85%)
+      Cetak SPB (≤90%)
     </button>
   );
 }
