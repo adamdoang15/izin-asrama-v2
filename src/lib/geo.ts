@@ -37,7 +37,7 @@ export function getAsramaConfig() {
   const lat = parseFloat(process.env.NEXT_PUBLIC_ASRAMA_LAT || process.env.ASRAMA_LAT || "-6.200000");
   const lng = parseFloat(process.env.NEXT_PUBLIC_ASRAMA_LNG || process.env.ASRAMA_LNG || "106.816666");
   const radius = parseFloat(
-    process.env.NEXT_PUBLIC_ASRAMA_RADIUS_METERS || process.env.ASRAMA_RADIUS_METERS || "100"
+    process.env.NEXT_PUBLIC_ASRAMA_RADIUS_METERS || process.env.ASRAMA_RADIUS_METERS || "40"
   );
   const maxAccuracy = parseFloat(
     process.env.NEXT_PUBLIC_ASRAMA_MAX_ACCURACY_METERS || process.env.ASRAMA_MAX_ACCURACY_METERS || "200"
@@ -46,7 +46,7 @@ export function getAsramaConfig() {
   return {
     lat: isNaN(lat) ? -6.200000 : lat,
     lng: isNaN(lng) ? 106.816666 : lng,
-    radiusMeters: isNaN(radius) ? 100 : radius,
+    radiusMeters: isNaN(radius) ? 40 : radius,
     maxAccuracyMeters: isNaN(maxAccuracy) ? 200 : maxAccuracy,
   };
 }
