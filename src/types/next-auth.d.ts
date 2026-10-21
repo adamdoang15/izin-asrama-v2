@@ -4,6 +4,7 @@ declare module "next-auth" {
   interface User {
     role?: "SANTRI" | "PENGURUS";
     kamar?: string | null;
+    pwd_sig?: string;
   }
 
   interface Session {
@@ -20,5 +21,6 @@ declare module "next-auth/jwt" {
     id?: string;
     role?: "SANTRI" | "PENGURUS";
     kamar?: string | null;
+    pwd_sig?: string;
   }
 }

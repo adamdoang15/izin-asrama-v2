@@ -27,7 +27,7 @@ export default function PanduanPage() {
     {
       step: "04",
       title: "Kepulangan & Validasi GPS",
-      desc: "Saat tiba kembali di asrama, Gelara menekan tombol 'Saya sudah kembali'. Aplikasi akan memvalidasi posisi GPS berada dalam radius 100 meter lokasi asrama.",
+      desc: "Saat tiba kembali di asrama, Gelara menekan tombol 'Saya sudah kembali'. Aplikasi akan memvalidasi posisi GPS berada dalam radius 40 meter lokasi asrama.",
     },
   ];
 
