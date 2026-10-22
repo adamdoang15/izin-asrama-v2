@@ -3,6 +3,7 @@ import { formatTanggal, jakartaDateParts } from "@/lib/format";
 import type { IzinRowWithUserJoin, StatusIzin, JenisIzin } from "@/lib/types";
 import { sendNotificationToPengurus, sendNotificationToUser } from "@/services/notification.service";
 import { getDailyActivityData } from "@/services/daily-activity.service";
+import { syncBlacklistStatus } from "@/services/user.service";
 
 export async function syncScheduledIzinStatuses(): Promise<void> {
   const now = new Date().toISOString();
@@ -270,13 +271,13 @@ export async function checkBannedSunday(userId: number, tanggal_keluar: string):
       .order("returned_at", { ascending: true });
 
     if (!latesError && lates && lates.length > 0) {
-      const latesByMonth: Record<string, any[]> = {};
+      const latesByMonth: Record<string, { returned_at: string }[]> = {};
       for (const late of lates) {
         if (!late.returned_at) continue;
         const { year, month } = jakartaDateParts(late.returned_at);
         const key = `${year}-${month}`;
         if (!latesByMonth[key]) latesByMonth[key] = [];
-        latesByMonth[key].push(late);
+        latesByMonth[key].push({ returned_at: late.returned_at });
       }
 
       const bannedSundays: string[] = [];
@@ -313,6 +314,16 @@ export async function createIzin(
   tanggal_keluar: string,
   perkiraan_kembali: string
 ): Promise<{ error?: string }> {
+  // Sync status jadwal aktif dan blacklist
+  await Promise.all([syncScheduledIzinStatuses(), syncBlacklistStatus()]);
+
+  // Validasi konflik jadwal aktif
+  const conflict = await checkActiveIzinConflict(userId, tanggal_keluar, perkiraan_kembali);
+  if (conflict.error) return { error: conflict.error };
+  if (conflict.hasConflict) {
+    return { error: "Kamu masih memiliki pengajuan/izin aktif pada rentang waktu tersebut." };
+  }
+
   // Check blacklist status
   const { data: user, error: userError } = await supabase
     .from("users")
@@ -414,21 +425,26 @@ export async function getCurrentIzinStatus(id: number) {
 export async function approveIzin(
   id: number,
   actorId: number,
-  nextStatus: "DISETUJUI" | "SEDANG_KELUAR"
+  nextStatus?: "DISETUJUI" | "SEDANG_KELUAR"
 ): Promise<{ error?: string }> {
-  const now = new Date().toISOString();
+  const now = new Date();
+  const nowIso = now.toISOString();
 
   // Get izin target user before update
   const current = await getCurrentIzinStatus(id);
+  if (!current) return { error: "Pengajuan tidak ditemukan." };
+  if (current.status !== "MENUNGGU") return { error: "Pengajuan ini sudah diproses." };
+
+  const targetStatus = nextStatus ?? (new Date(current.tanggal_keluar) <= now ? "SEDANG_KELUAR" : "DISETUJUI");
 
   const { error } = await supabase
     .from("izin")
     .update({
-      status: nextStatus,
+      status: targetStatus,
       approved_by: actorId,
-      approved_at: now,
+      approved_at: nowIso,
       catatan_admin: null,
-      updated_at: now,
+      updated_at: nowIso,
     })
     .eq("id", id)
     .eq("status", "MENUNGGU");
@@ -440,7 +456,7 @@ export async function approveIzin(
     actor_id: actorId,
     action: "SETUJUI",
     old_status: "MENUNGGU",
-    new_status: nextStatus,
+    new_status: targetStatus,
     catatan: null,
   });
 
@@ -464,6 +480,8 @@ export async function rejectIzin(
 
   // Get izin target user before update
   const current = await getCurrentIzinStatus(id);
+  if (!current) return { error: "Pengajuan tidak ditemukan." };
+  if (current.status !== "MENUNGGU") return { error: "Pengajuan ini sudah diproses." };
 
   const { error } = await supabase
     .from("izin")
@@ -567,6 +585,12 @@ export async function submitIzinRevision(
   if (before.user_id !== userId) return { error: "Anda tidak memiliki akses ke pengajuan ini." };
   if (before.status !== "PERLU_REVISI") return { error: "Pengajuan ini tidak sedang menunggu revisi Anda." };
 
+  const conflict = await checkActiveIzinConflict(userId, input.tanggal_keluar, input.perkiraan_kembali, id);
+  if (conflict.error) return { error: conflict.error };
+  if (conflict.hasConflict) {
+    return { error: "Jadwal baru ini bentrok dengan pengajuan/izin aktif Anda yang lain." };
+  }
+
   const bannedSundayCheck = await checkBannedSunday(userId, input.tanggal_keluar);
   if (bannedSundayCheck.error) {
     return { error: bannedSundayCheck.error };
@@ -648,20 +672,35 @@ export async function logGagalValidasiLokasi(
 export async function markIzinReturned(
   id: number,
   userId: number,
-  returnedAt: string,
-  returnStatus: "TEPAT_WAKTU" | "TERLAMBAT",
-  lateMinutes: number,
-  santriName: string,
+  returnedAt?: string,
+  returnStatus?: "TEPAT_WAKTU" | "TERLAMBAT",
+  lateMinutes?: number,
+  santriName?: string,
   locationInfo?: { latitude: number; longitude: number; distance: number; accuracy?: number }
 ): Promise<{ error?: string }> {
+  const now = new Date();
+  const finalReturnedAt = returnedAt || now.toISOString();
+
+  let finalLateMinutes = lateMinutes;
+  let finalReturnStatus = returnStatus;
+
+  if (finalLateMinutes === undefined || finalReturnStatus === undefined) {
+    const current = await getCurrentIzinStatus(id);
+    if (!current) return { error: "Pengajuan tidak ditemukan." };
+    const batasKembali = new Date(current.perkiraan_kembali);
+    const lateMs = Math.max(0, now.getTime() - batasKembali.getTime());
+    finalLateMinutes = Math.ceil(lateMs / 60000);
+    finalReturnStatus = finalLateMinutes > 0 ? "TERLAMBAT" : "TEPAT_WAKTU";
+  }
+
   const { error } = await supabase
     .from("izin")
     .update({
       status: "SUDAH_KEMBALI",
-      returned_at: returnedAt,
-      return_status: returnStatus,
-      late_minutes: lateMinutes,
-      updated_at: returnedAt,
+      returned_at: finalReturnedAt,
+      return_status: finalReturnStatus,
+      late_minutes: finalLateMinutes,
+      updated_at: finalReturnedAt,
     })
     .eq("id", id)
     .eq("user_id", userId)
@@ -669,7 +708,7 @@ export async function markIzinReturned(
 
   if (error) return { error: `Gagal mencatat kepulangan: ${error.message}` };
 
-  const statusCatatan = returnStatus === "TERLAMBAT" ? `Terlambat ${lateMinutes} menit.` : "Kembali tepat waktu.";
+  const statusCatatan = finalReturnStatus === "TERLAMBAT" ? `Terlambat ${finalLateMinutes} menit.` : "Kembali tepat waktu.";
   const accText = locationInfo?.accuracy !== undefined ? `, Akurasi: ±${Math.round(locationInfo.accuracy)}m` : "";
   const locationCatatan = locationInfo
     ? ` [Lokasi GPS: ${locationInfo.latitude.toFixed(6)}, ${locationInfo.longitude.toFixed(6)} (Jarak: ${locationInfo.distance}m${accText})]`
