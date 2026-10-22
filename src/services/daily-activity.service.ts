@@ -1,3 +1,5 @@
+import { jakartaDateParts } from "@/lib/format";
+
 /**
  * Daily Activity Service
  *
@@ -576,7 +578,8 @@ export function getActiveYearAndMonth(): { year: number; month: number; monthId:
     return { year: envYear, month: envMonth, monthId };
   }
 
-  return { year: 2026, month: 9, monthId: "2026-09" };
+  const { year, month } = jakartaDateParts();
+  return { year, month, monthId: `${year}-${String(month).padStart(2, "0")}` };
 }
 
 /**
@@ -789,8 +792,10 @@ export async function getDailyActivityData(params?: {
     });
 
   const weeks = generateWeeksForMonth(year, month);
-  // Default to Week 1 or current/matching week
-  const defaultWeekId = weeks[weeks.length - 1]?.id || "w1";
+  const { year: curY, month: curM, day: curD } = jakartaDateParts();
+  const todayIso = `${curY}-${String(curM).padStart(2, "0")}-${String(curD).padStart(2, "0")}`;
+  const todayWeek = weeks.find((w) => todayIso >= w.startDate && todayIso <= w.endDate);
+  const defaultWeekId = todayWeek?.id || weeks[0]?.id || "w1";
   const selectedWeekId = params?.weekId && weeks.some((w) => w.id === params.weekId)
     ? params.weekId
     : defaultWeekId;
