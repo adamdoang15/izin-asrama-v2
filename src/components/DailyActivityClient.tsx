@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
   AbsentActivityRecord,
@@ -59,6 +59,10 @@ function DailyActivityGelaraView({
 
   const [selectedWeekId, setSelectedWeekId] = useState(initialData.selectedWeekId);
   const [periodTab, setPeriodTab] = useState<"mingguan" | "bulanan">("mingguan");
+
+  useEffect(() => {
+    setSelectedWeekId(initialData.selectedWeekId);
+  }, [initialData.selectedWeekId]);
 
   const currentWeek =
     initialData.weeks.find((w) => w.id === selectedWeekId) || initialData.weeks[0];
@@ -126,31 +130,64 @@ function DailyActivityGelaraView({
         </div>
       </div>
 
-      {/* Selector Minggu (jika tab Mingguan aktif) */}
-      {periodTab === "mingguan" && initialData.weeks.length > 1 && (
-        <div className="flex items-center glass-panel !rounded-xl p-1.5 md:p-2 gap-2 md:gap-4 w-full md:w-max max-w-full shadow-sm overflow-hidden">
-          <label htmlFor="gelara-week-select" className="shrink-0 text-[10px] md:text-xs font-bold uppercase tracking-widest text-ink-soft pl-2 md:pl-3">
-            Periode
-          </label>
-          <select
-            id="gelara-week-select"
-            value={selectedWeekId}
-            onChange={(e) => {
-              setSelectedWeekId(e.target.value);
-              const sp = new URLSearchParams();
-              sp.set("week", e.target.value);
-              router.push(`/daily-activity?${sp.toString()}`);
-            }}
-            className="flex-1 min-w-0 w-full text-ellipsis rounded-lg bg-white/40 dark:bg-ink/10 border border-line/50 md:bg-transparent md:border-none px-3 py-2 text-xs md:text-sm font-bold text-ink outline-none focus:ring-0 cursor-pointer hover:bg-ink/5 dark:hover:bg-paper-raised transition-colors"
-          >
-            {initialData.weeks.map((w) => (
-              <option key={w.id} value={w.id} className="bg-paper text-ink font-medium">
-                {w.label}
-              </option>
-            ))}
-          </select>
+      {/* Selector Periode (Bulan & Minggu) Sesuai Mockup */}
+      <div className="inline-flex flex-wrap sm:flex-nowrap items-center gap-3 bg-[#181b1f] border border-line/50 dark:border-white/10 rounded-2xl p-2 sm:p-2.5 shadow-sm w-fit max-w-full">
+        <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-ink-soft whitespace-nowrap pl-2 select-none">
+          PILIH PERIODE:
+        </span>
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
+          {/* Dropdown Bulan */}
+          <div className="relative flex-1 sm:flex-initial">
+            <select
+              value={initialData.selectedMonthId}
+              onChange={(e) => {
+                const sp = new URLSearchParams();
+                sp.set("month", e.target.value);
+                router.push(`/daily-activity?${sp.toString()}`);
+              }}
+              className="appearance-none w-full sm:w-auto rounded-xl border border-line/40 dark:border-white/10 bg-[#25292e] dark:bg-[#23272c] hover:bg-[#2e343b] text-white text-xs sm:text-sm font-medium py-2 pl-3.5 pr-8 outline-none focus:ring-1 focus:ring-teal/60 cursor-pointer transition-colors"
+            >
+              {initialData.availableMonths.map((m) => (
+                <option key={m.id} value={m.id} className="bg-paper text-ink dark:bg-[#1f2420] dark:text-white">
+                  {m.label}
+                </option>
+              ))}
+            </select>
+            <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+              </svg>
+            </span>
+          </div>
+
+          {/* Dropdown Minggu */}
+          <div className="relative flex-1 sm:flex-initial">
+            <select
+              value={selectedWeekId}
+              onChange={(e) => {
+                setSelectedWeekId(e.target.value);
+                setPeriodTab("mingguan");
+                const sp = new URLSearchParams();
+                sp.set("month", initialData.selectedMonthId);
+                sp.set("week", e.target.value);
+                router.push(`/daily-activity?${sp.toString()}`);
+              }}
+              className="appearance-none w-full sm:w-auto rounded-xl border border-line/40 dark:border-white/10 bg-[#25292e] dark:bg-[#23272c] hover:bg-[#2e343b] text-white text-xs sm:text-sm font-medium py-2 pl-3.5 pr-8 outline-none focus:ring-1 focus:ring-teal/60 cursor-pointer transition-colors"
+            >
+              {initialData.weeks.map((w) => (
+                <option key={w.id} value={w.id} className="bg-paper text-ink dark:bg-[#1f2420] dark:text-white">
+                  {w.label}
+                </option>
+              ))}
+            </select>
+            <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+              </svg>
+            </span>
+          </div>
         </div>
-      )}
+      </div>
 
       {/* Progress Cards: Persentase Pelanggaran */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
