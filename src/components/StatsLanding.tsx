@@ -180,7 +180,7 @@ export default function StatsLanding({ rows }: Props) {
           ? buckets.map((b) => b.label)
           : null;
 
-    const inPeriod = keys
+    let inPeriod = keys
       ? rows.filter((r) => {
         const key = period === "HARIAN" ? keyOf(r.tanggal_keluar) : period === "BULANAN" ? monthKey(r.tanggal_keluar) : yearKey(r.tanggal_keluar);
         return keys.includes(key);
@@ -191,14 +191,10 @@ export default function StatsLanding({ rows }: Props) {
       const p = parts(today);
       const year = Number(p.year);
       const month = Number(p.month);
-      inPeriod.splice(
-        0,
-        inPeriod.length,
-        ...rows.filter((r) => {
-          const rp = parts(r.tanggal_keluar);
-          return Number(rp.year) === year && Number(rp.month) === month;
-        })
-      );
+      inPeriod = rows.filter((r) => {
+        const rp = parts(r.tanggal_keluar);
+        return Number(rp.year) === year && Number(rp.month) === month;
+      });
     }
 
     const approved = inPeriod.filter((r) => r.status === "DISETUJUI" || r.status === "SEDANG_KELUAR" || r.status === "SUDAH_KEMBALI").length;
@@ -266,12 +262,11 @@ export default function StatsLanding({ rows }: Props) {
         <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-5">
           <div className="glass-panel p-8 flex flex-col justify-center">
             <h2 className="text-xl font-bold tracking-tight">Kepatuhan Kepulangan</h2>
-            <div className="mt-8 flex items-baseline gap-6">
+            <div className="mt-8 grid grid-cols-2 gap-8 text-left">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-widest text-ink-soft">Tepat Waktu</p>
                 <p className="mt-2 text-4xl font-bold text-sage">{Math.max(data.returned - data.late, 0).toLocaleString("id-ID")}</p>
               </div>
-              <div className="h-12 w-px bg-line/50"></div>
               <div>
                 <p className="text-xs font-semibold uppercase tracking-widest text-ink-soft">Terlambat</p>
                 <p className="mt-2 text-4xl font-bold text-clay">{data.late.toLocaleString("id-ID")}</p>

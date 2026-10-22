@@ -5,79 +5,7 @@ import Link from "next/link";
 import { BellIcon, CalendarActivityIcon, ChevronDownIcon, DashboardIcon, UsersIcon } from "./icons";
 import ThemeToggle from "./ThemeToggle";
 
-function DownloadIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className={className}>
-      <path d="M12 3v13M7 11l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M4 20h16" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function ExportPanel({ onClose }: { onClose: () => void }) {
-  return (
-    <div className="border-t border-line px-4 py-3 space-y-3">
-      <p className="text-xs font-semibold text-ink-soft uppercase tracking-wide">Ekspor laporan</p>
-      <form
-        method="get"
-        action="/api/laporan/export"
-        target="_blank"
-        onSubmit={onClose}
-        className="space-y-2"
-      >
-        <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1">
-            <label className="block text-xs font-medium" htmlFor="em-start">Dari</label>
-            <input
-              id="em-start"
-              type="date"
-              name="start"
-              className="w-full rounded-md border border-line bg-paper px-2 py-1.5 text-xs outline-none focus:border-teal focus:ring-1 focus:ring-teal"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="block text-xs font-medium" htmlFor="em-end">Sampai</label>
-            <input
-              id="em-end"
-              type="date"
-              name="end"
-              className="w-full rounded-md border border-line bg-paper px-2 py-1.5 text-xs outline-none focus:border-teal focus:ring-1 focus:ring-teal"
-            />
-          </div>
-        </div>
-        <select
-          name="status"
-          className="w-full rounded-md border border-line bg-paper px-2 py-1.5 text-xs outline-none focus:border-teal focus:ring-1 focus:ring-teal"
-        >
-          <option value="">Semua status</option>
-          <option value="MENUNGGU">Menunggu</option>
-          <option value="DISETUJUI">Disetujui</option>
-          <option value="SEDANG_KELUAR">Sedang keluar</option>
-          <option value="SUDAH_KEMBALI">Sudah kembali</option>
-          <option value="DITOLAK">Ditolak</option>
-          <option value="DIHAPUS">Dihapus</option>
-        </select>
-        <select
-          name="jenis"
-          className="w-full rounded-md border border-line bg-paper px-2 py-1.5 text-xs outline-none focus:border-teal focus:ring-1 focus:ring-teal"
-        >
-          <option value="">Semua jenis</option>
-          <option value="HARIAN">Izin harian</option>
-          <option value="MENGINAP">Izin menginap</option>
-          <option value="REKREASI">Rekreasi</option>
-          <option value="KELUARGA">Keperluan keluarga</option>
-          <option value="DARURAT">Darurat</option>
-        </select>
-        <button
-          type="submit"
-          className="w-full rounded-md bg-teal px-3 py-1.5 text-xs font-medium text-paper-raised hover:opacity-90 transition-opacity"
-        >
-          ↓ Ekspor Excel
-        </button>
-      </form>
-    </div>
-  );
-}
+// Fungsi Export telah dipindahkan ke dashboard pengurus
 
 export default function UserMenu({
   name,
@@ -106,7 +34,6 @@ export default function UserMenu({
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
-        setEksporOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -117,7 +44,6 @@ export default function UserMenu({
 
   function closeAll() {
     setOpen(false);
-    setEksporOpen(false);
   }
 
   return (
@@ -135,7 +61,7 @@ export default function UserMenu({
       <div className="relative" ref={ref}>
         <button
           type="button"
-          onClick={() => { setOpen((v) => !v); setEksporOpen(false); }}
+          onClick={() => { setOpen((v) => !v); }}
           className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 hover:bg-paper transition-colors"
         >
           <span className="grid h-8 w-8 place-items-center rounded-full bg-teal-soft text-sm font-semibold text-teal">
@@ -203,24 +129,6 @@ export default function UserMenu({
               >
                 Pengaturan akun
               </Link>
-            )}
-
-            {/* Ekspor laporan */}
-            {showEkspor && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setEksporOpen((v) => !v)}
-                  className="flex w-full items-center gap-2.5 border-b border-line px-4 py-2.5 text-sm text-ink-soft hover:bg-paper hover:text-ink"
-                >
-                  <DownloadIcon className="h-4 w-4 shrink-0" />
-                  <span className="flex-1 text-left">Ekspor laporan</span>
-                  <ChevronDownIcon
-                    className={`h-3.5 w-3.5 transition-transform ${eksporOpen ? "rotate-180" : ""}`}
-                  />
-                </button>
-                {eksporOpen && <ExportPanel onClose={closeAll} />}
-              </>
             )}
 
             {/* Keluar */}

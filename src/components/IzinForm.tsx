@@ -79,7 +79,7 @@ export default function IzinForm({ isBlacklisted, blacklistReason, blacklistUnti
 
   return (
     <form ref={formRef} action={formAction} className="rounded-md border border-line bg-paper-raised p-4 space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="space-y-4">
         <div className="space-y-1.5">
           <label htmlFor="jenis_izin" className="block text-sm font-medium">Jenis izin</label>
           <select id="jenis_izin" name="jenis_izin" required className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-teal focus:ring-1 focus:ring-teal">
@@ -99,7 +99,7 @@ export default function IzinForm({ isBlacklisted, blacklistReason, blacklistUnti
         <label htmlFor="alasan" className="block text-sm font-medium">Alasan</label>
         <textarea id="alasan" name="alasan" rows={3} required placeholder="Jelaskan alasan izin secara singkat" className="w-full rounded-md border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-teal focus:ring-1 focus:ring-teal resize-none" />
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="space-y-4">
         <div className="space-y-1.5">
           <label htmlFor="tanggal_keluar" className="block text-sm font-medium">Waktu keluar</label>
           <input

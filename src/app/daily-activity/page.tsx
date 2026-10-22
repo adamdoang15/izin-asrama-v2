@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getDailyActivityData } from "@/services/daily-activity.service";
-import DailyActivityClient from "@/components/DailyActivityClient";
+import DailyActivityClient from "@/components/daily-activity/DailyActivityClient";
 
 type SearchParams = Promise<{
   week?: string;

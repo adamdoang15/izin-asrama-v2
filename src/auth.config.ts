@@ -11,8 +11,10 @@ export const authConfig: NextAuthConfig = {
   pages: {
     signIn: "/login",
   },
+  useSecureCookies: process.env.NODE_ENV === "production",
   session: {
     strategy: "jwt",
+    maxAge: 6 * 60 * 60, // 6 jam
   },
   providers: [],
   callbacks: {
@@ -27,9 +29,9 @@ export const authConfig: NextAuthConfig = {
       const isPengaturanRoute = nextUrl.pathname.startsWith("/pengaturan");
       const isDailyActivityRoute = nextUrl.pathname.startsWith("/daily-activity");
 
-      // Jika pengguna sudah login, membuka halaman awal (/) atau login (/login)
+      // Jika pengguna sudah login, membuka halaman awal (/)
       // akan langsung dialihkan ke dashboard sesuai role
-      if (isLoggedIn && (isRootRoute || isLoginRoute)) {
+      if (isLoggedIn && isRootRoute) {
         if (role === "PENGURUS") {
           return Response.redirect(new URL("/kelola-akun", nextUrl));
         }

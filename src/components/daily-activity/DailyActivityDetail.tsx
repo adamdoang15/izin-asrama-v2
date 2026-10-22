@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { AbsentActivityRecord, GelaraSummary, WeekPeriod } from "@/services/daily-activity.service";
 import dynamic from "next/dynamic";
 
-const SPPDFDownloadButton = dynamic(() => import("./SPPDFDownloadButton"), {
+const SPPDFDownloadButton = dynamic(() => import("../SPPDFDownloadButton"), {
   ssr: false,
 });
 
@@ -155,7 +155,7 @@ export default function DailyActivityDetail({
                 <p className="text-xs text-ink-soft mt-0.5">Detail Monitoring Kehadiran & Pelanggaran</p>
               </div>
             </div>
-            {summary.progressBulanan !== null && summary.progressBulanan < 85 && (
+            {summary.progressBulanan !== null && summary.progressBulanan <= 90 && (
               <div className="sm:mr-4">
                 <SPPDFDownloadButton
                   monthLabel={monthLabel}
