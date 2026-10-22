@@ -1,3 +1,5 @@
+import { logGagalValidasiLokasi } from "@/services/izin.service";
+
 /**
  * Utility functions for Geofencing & Distance Calculations using Haversine formula.
  */
@@ -50,3 +52,57 @@ export function getAsramaConfig() {
     maxAccuracyMeters: isNaN(maxAccuracy) ? 200 : maxAccuracy,
   };
 }
+
+export interface Coordinates {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+}
+
+export interface GeofenceLocationInfo {
+  latitude: number;
+  longitude: number;
+  distance: number;
+  accuracy?: number;
+}
+
+export type GeofenceResult =
+  | { success: true; locationInfo: GeofenceLocationInfo }
+  | { success: false; error: string; locationInfo: GeofenceLocationInfo };
+
+/**
+ * Deep geofence verification seam.
+ * Validates GPS accuracy, distance to asrama radius, writes failure audit logs,
+ * and formats user-friendly error messages.
+ */
+export async function verifyReturnLocation(
+  izinId: number,
+  userId: number,
+  coords: Coordinates
+): Promise<GeofenceResult> {
+  const asrama = getAsramaConfig();
+  const distance = getDistanceInMeters(coords.latitude, coords.longitude, asrama.lat, asrama.lng);
+  const locationInfo: GeofenceLocationInfo = {
+    latitude: coords.latitude,
+    longitude: coords.longitude,
+    distance,
+    accuracy: coords.accuracy,
+  };
+
+  // Validasi akurasi sinyal GPS
+  if (coords.accuracy !== undefined && coords.accuracy > asrama.maxAccuracyMeters) {
+    const error = `Sinyal GPS kurang akurat (akurasi ±${Math.round(coords.accuracy)} meter, batas maksimal ${asrama.maxAccuracyMeters} meter). Coba dekati jendela atau area terbuka di asrama, lalu coba lagi.`;
+    await logGagalValidasiLokasi(izinId, userId, "Sinyal GPS kurang akurat", locationInfo);
+    return { success: false, error, locationInfo };
+  }
+
+  // Validasi batas radius asrama
+  if (distance > asrama.radiusMeters) {
+    const error = `Gagal mencatat kepulangan. Anda berada di luar radius asrama (jarak terdeteksi: ${distance} meter, batas radius: ${asrama.radiusMeters} meter). Pastikan Anda sudah berada di area asrama.`;
+    await logGagalValidasiLokasi(izinId, userId, "Di luar radius asrama", locationInfo);
+    return { success: false, error, locationInfo };
+  }
+
+  return { success: true, locationInfo };
+}
+

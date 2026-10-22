@@ -1,58 +1,31 @@
 import { jakartaDateParts } from "@/lib/format";
-
-/**
- * Daily Activity Service
- *
- * Bertanggung jawab untuk:
- * 1. Mengambil data dari Google Sheets / Excel / Endpoint / Sample Fallback
- * 2. Membaca & menormalisasi 24 sheet aktivitas gelara
- * 3. Menghitung progress mingguan & bulanan sesuai rumus Opsi 1:
- *    Progress (%) = ((Total kegiatan tercatat - (Jumlah status A + S + I)) / Total kegiatan tercatat) * 100
- * 4. Menyaring daftar ketidakhadiran (status A, S, dan I)
- * 5. Menangani caching, filter, dan error state dengan aman tanpa crash
- */
-
 import { supabase } from "@/lib/supabase";
+import {
+  getRawDailyActivityRecords,
+  normalizeGelaraName,
+  getConfiguredSheetMap,
+  getActiveYearAndMonth,
+  ACTIVITY_SHEETS,
+  SHOLAT_SHEETS,
+  type NormalizedActivityRecord,
+  type ActivityStatus,
+} from "./daily-activity-ingestion";
 
 /**
- * Daftar sheet aktivitas hardcoded sebagai fallback
- * Digunakan jika auto-discovery via HTML scraping gagal
+ * Re-export Ingestion Adapter primitives for backward compatibility
  */
-export const ACTIVITY_SHEETS = [
-  "BANGUN TIDUR",
-  "MANDI PAGI",
-  "SHOLAT SUBUH",
-  "PENGAMBILAN HP",
-  "TC",
-  "PIKET",
-  "MAKAN PAGI",
-  "OLAHRAGA",
-  "BERANGKAT SEKOLAH",
-  "SHOLAT DZUHUR",
-  "SHOLAT ASHAR",
-  "PENGAJIAN MINGGU",
-  "PULANG SEKOLAH",
-  "MANDI SORE",
-  "SHOLAT MAGHRIB",
-  "SHOLAT ISYA",
-  "MAKAN MALAM",
-  "NONTON BARENG",
-  "ZOOM VICON",
-  "KOORDINASI BULANAN",
-  "KBM",
-  "APEL MALAM",
-  "PENGUMPULAN HP",
-  "OPSIH",
-] as const;
+export {
+  getRawDailyActivityRecords,
+  normalizeGelaraName,
+  getConfiguredSheetMap,
+  getActiveYearAndMonth,
+  ACTIVITY_SHEETS,
+  SHOLAT_SHEETS,
+  type NormalizedActivityRecord,
+  type ActivityStatus,
+};
 
-/** Sheet-sheet sholat berjamaah */
-export const SHOLAT_SHEETS = [
-  "SHOLAT SUBUH",
-  "SHOLAT DZUHUR",
-  "SHOLAT ASHAR",
-  "SHOLAT MAGHRIB",
-  "SHOLAT ISYA",
-] as const;
+export type ActivityName = string;
 
 export interface KelasStatistik {
   kelas: string;
@@ -70,17 +43,6 @@ export interface KelasStatistik {
   overallIzin: number;
 }
 
-export type ActivityName = string;
-
-export type ActivityStatus = "H" | "S" | "T" | "I" | "A";
-
-export interface NormalizedActivityRecord {
-  tanggal: string; // YYYY-MM-DD
-  namaGelara: string;
-  aktivitas: string;
-  status: ActivityStatus;
-}
-
 export interface AbsentActivityRecord {
   id: string;
   tanggal: string; // YYYY-MM-DD
@@ -94,8 +56,8 @@ export interface AbsentActivityRecord {
 export interface GelaraSummary {
   no: number;
   namaGelara: string;
-  progressMingguan: number | null; // null jika tidak ada data tercatat
-  progressBulanan: number | null; // null jika tidak ada data tercatat
+  progressMingguan: number | null;
+  progressBulanan: number | null;
   jumlahAMingguan: number;
   jumlahABulanan: number;
   jumlahSMingguan: number;
@@ -107,17 +69,17 @@ export interface GelaraSummary {
 }
 
 export interface WeekPeriod {
-  id: string; // e.g. "w4"
-  label: string; // e.g. "Minggu 4 (21 Sep - 27 Sep 2026)"
-  shortLabel: string; // e.g. "Minggu 4"
+  id: string;
+  label: string;
+  shortLabel: string;
   startDate: string; // YYYY-MM-DD
   endDate: string; // YYYY-MM-DD
   isCurrent?: boolean;
 }
 
 export interface MonthPeriod {
-  id: string; // e.g. "2026-09"
-  label: string; // e.g. "September 2026"
+  id: string;
+  label: string;
   year: number;
   month: number;
 }
@@ -141,124 +103,10 @@ export interface DailyActivityDataResult {
   kelasStatistikBulanan?: KelasStatistik[];
 }
 
-// In-memory cache untuk records
-interface CacheEntry {
-  timestamp: number;
-  data: NormalizedActivityRecord[];
-  sourceType: "google-sheet" | "excel" | "sample";
-  sheetNames: string[];
-}
-
-const memoryCacheMap: Record<string, CacheEntry> = {};
-const CACHE_TTL_MS = 60 * 1000; // 1 menit cache
-
-// Cache untuk hasil auto-discovery nama sheet
-interface SheetDiscoveryCache {
-  timestamp: number;
-  sheetNames: string[];
-}
-
-const sheetDiscoveryCacheMap: Record<string, SheetDiscoveryCache> = {};
-const DISCOVERY_CACHE_TTL_MS = 5 * 60 * 1000; // 5 menit cache
-
-/**
- * Auto-discover nama sheet dari Google Sheets htmlview.
- * Parse tab-tab yang ada di bagian bawah spreadsheet.
- * Jika gagal, kembalikan array kosong (gunakan fallback ACTIVITY_SHEETS).
- */
-async function discoverSheetNames(sheetId: string): Promise<string[]> {
-  const now = Date.now();
-  const cachedDiscovery = sheetDiscoveryCacheMap[sheetId];
-  if (
-    cachedDiscovery &&
-    now - cachedDiscovery.timestamp < DISCOVERY_CACHE_TTL_MS
-  ) {
-    return cachedDiscovery.sheetNames;
-  }
-
-  try {
-    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/htmlview`;
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) {
-      console.warn(`[SheetDiscovery] htmlview fetch failed: ${res.status}`);
-      return [];
-    }
-
-    const html = await res.text();
-    const names: string[] = [];
-
-    // Pola 0 (Google Sheets script items modern): items.push({name: "...", ...})
-    const pattern0 = /items\.push\({\s*name:\s*["']([^"']+)["']/gi;
-    let m: RegExpExecArray | null;
-    while ((m = pattern0.exec(html)) !== null) {
-      const name = m[1].trim();
-      if (name && !names.includes(name) && name.toUpperCase() !== "REKAP") {
-        names.push(name);
-      }
-    }
-
-    // Pola script fallback: {name: "..."
-    if (names.length === 0) {
-      const patternScript = /\{name:\s*["']([^"']+)["']/gi;
-      while ((m = patternScript.exec(html)) !== null) {
-        const name = m[1].trim();
-        if (name && !names.includes(name) && name.toUpperCase() !== "REKAP") {
-          names.push(name);
-        }
-      }
-    }
-
-    // Pola 1 (HTML <li> tab elements): <li id="sheet-button-...">Nama Sheet</li>
-    if (names.length === 0) {
-      const pattern1 = /<li[^>]*id=["']sheet-button-[^"']*["'][^>]*>([^<]+)<\/li>/gi;
-      while ((m = pattern1.exec(html)) !== null) {
-        const name = m[1].trim();
-        if (name && !names.includes(name) && name.toUpperCase() !== "REKAP") {
-          names.push(name);
-        }
-      }
-    }
-
-    // Pola 2 (fallback): data-name="..." pada elemen tab
-    if (names.length === 0) {
-      const pattern2 = /data-name=["']([^"']+)["']/gi;
-      while ((m = pattern2.exec(html)) !== null) {
-        const name = m[1].trim();
-        if (name && !names.includes(name) && name.toUpperCase() !== "REKAP") {
-          names.push(name);
-        }
-      }
-    }
-
-    // Pola 3 (fallback): class="goog-tab" dan ambil innerText
-    if (names.length === 0) {
-      const pattern3 = /class=["'][^"']*goog-tab[^"']*["'][^>]*>([^<]+)</gi;
-      while ((m = pattern3.exec(html)) !== null) {
-        const name = m[1].trim();
-        if (name && name.length > 0 && name.length < 100 && !names.includes(name) && name.toUpperCase() !== "REKAP") {
-          names.push(name);
-        }
-      }
-    }
-
-    if (names.length > 0) {
-      console.log(`[SheetDiscovery] Ditemukan ${names.length} sheet:`, names);
-      sheetDiscoveryCacheMap[sheetId] = { timestamp: now, sheetNames: names };
-      return names;
-    }
-
-    console.warn("[SheetDiscovery] Tidak ada nama sheet ditemukan dari htmlview.");
-    return [];
-  } catch (err) {
-    console.warn("[SheetDiscovery] Gagal fetch htmlview:", err);
-    return [];
-  }
-}
-
 const NAMA_HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 const NAMA_BULAN = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-  "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
 ];
 
 function formatTanggalIndo(dateStr: string): string {
@@ -277,30 +125,6 @@ function getHariIndo(dateStr: string): string {
 }
 
 /**
- * Normalisasi nama gelara untuk konsistensi pencocokan antar-sheet.
- * Menangani: spasi ganda, non-breaking space, karakter invisible,
- * Unicode lookalikes, dan kapitalisasi tidak konsisten.
- */
-export function normalizeGelaraName(rawName: string): string {
-  return (
-    rawName
-      // Unicode normalization (NFC) – satukan karakter komposit
-      .normalize("NFC")
-      // Ganti semua jenis whitespace (termasuk \u00A0 non-breaking space) dengan spasi biasa
-      .replace(/[\s\u00A0\u200B\u200C\u200D\uFEFF]+/g, " ")
-      // Hapus karakter non-printable / control characters
-      .replace(/[\x00-\x1F\x7F]/g, "")
-      .trim()
-      .toLowerCase()
-      // Title-case setiap kata secara individual
-      .split(" ")
-      .filter(Boolean)
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ")
-  );
-}
-
-/**
  * Generate kalender minggu (Senin - Minggu) untuk sebuah bulan
  */
 export function generateWeeksForMonth(year: number, month: number): WeekPeriod[] {
@@ -313,8 +137,7 @@ export function generateWeeksForMonth(year: number, month: number): WeekPeriod[]
 
   while (currentStartDay <= daysInMonth) {
     const startDate = new Date(Date.UTC(year, month - 1, currentStartDay));
-    const dayOfWeek = startDate.getUTCDay(); // 0 = Minggu, 1 = Senin, ...
-    // Senin = 1, Minggu = 7
+    const dayOfWeek = startDate.getUTCDay();
     const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
     let endDay = currentStartDay + daysUntilSunday;
     if (endDay > daysInMonth) {
@@ -342,400 +165,7 @@ export function generateWeeksForMonth(year: number, month: number): WeekPeriod[]
 }
 
 /**
- * Generate Sample Dataset realistis untuk September 2026
- * Sesuai contoh pada issue.md (16 sheet aktivitas, gelara: Adam Abdilah, Bakhita Akhtara Khairan, dll.)
- */
-function generateSampleData(): NormalizedActivityRecord[] {
-  const records: NormalizedActivityRecord[] = [];
-  const year = 2026;
-  const month = 9;
-  const daysInMonth = 30;
-
-  const gelaraList = [
-    { name: "Adam Abdilah", aRatio: 0.07 },
-    { name: "Bakhita Akhtara Khairan", aRatio: 0.035 },
-    { name: "Ahmad Fauzan", aRatio: 0.05 },
-    { name: "Bilal Hidayat", aRatio: 0.04 },
-    { name: "Muhammad Farhan", aRatio: 0.06 },
-    { name: "Farras Ramadhan", aRatio: 0.045 },
-    { name: "Daffa Pratama", aRatio: 0.08 },
-    { name: "Rizky Firmansyah", aRatio: 0.05 },
-    { name: "Zaidan Alfarizi", aRatio: 0.03 },
-    { name: "Ibnu Sina", aRatio: 0.02 },
-    { name: "Rayhan Maulana", aRatio: 0.055 },
-    { name: "Naufal Hadi", aRatio: 0.04 },
-  ];
-
-  // Specific deterministic absences for realistic testing matching issue.md
-  // Contoh issue:
-  // Adam Abdilah: 1 Sep (BANGUN TIDUR), 3 Sep (PIKET), 5 Sep (SHOLAT SUBUH)
-  // Bakhita: 5 Sep (MANDI PAGI)
-  const knownA: Record<string, string[]> = {
-    "Adam Abdilah": [
-      "2026-09-01|BANGUN TIDUR",
-      "2026-09-03|PIKET",
-      "2026-09-03|BANGUN TIDUR",
-      "2026-09-05|SHOLAT SUBUH",
-      "2026-09-08|MANDI PAGI",
-      "2026-09-12|APEL MALAM",
-      "2026-09-15|KBM",
-      "2026-09-19|SHOLAT DZUHUR",
-      "2026-09-22|TC",
-      "2026-09-23|SHOLAT ISYA",
-      "2026-09-24|MAKAN MALAM",
-      "2026-09-25|PENGAMBILAN HP",
-      "2026-09-27|BERANGKAT SEKOLAH",
-      "2026-09-28|SHOLAT MAGHRIB",
-      "2026-09-29|SHOLAT ASHAR",
-      "2026-09-30|PENGUMPULAN HP",
-      "2026-09-21|BANGUN TIDUR",
-      "2026-09-26|PIKET",
-    ],
-    "Bakhita Akhtara Khairan": [
-      "2026-09-05|MANDI PAGI",
-      "2026-09-11|SHOLAT SUBUH",
-      "2026-09-14|TC",
-      "2026-09-18|PIKET",
-      "2026-09-21|KBM",
-      "2026-09-23|APEL MALAM",
-      "2026-09-26|SHOLAT MAGHRIB",
-      "2026-09-29|BANGUN TIDUR",
-      "2026-09-30|MAKAN PAGI",
-    ],
-  };
-
-  for (const gelara of gelaraList) {
-    const knownSet = new Set(knownA[gelara.name] || []);
-
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dayStr = String(day).padStart(2, "0");
-      const dateIso = `${year}-${String(month).padStart(2, "0")}-${dayStr}`;
-
-      for (const sheet of ACTIVITY_SHEETS) {
-        const key = `${dateIso}|${sheet}`;
-        let status: ActivityStatus = "H";
-
-        if (knownSet.has(key)) {
-          status = "A";
-        } else {
-          // Pseudorandom deterministic pattern based on day, sheet length, and gelara
-          const hash = (day * 31 + sheet.charCodeAt(0) * 17 + gelara.name.charCodeAt(0) * 7) % 100;
-          if (hash < gelara.aRatio * 100 && knownSet.size === 0) {
-            status = "A";
-          } else if (hash === 97) {
-            status = "I";
-          } else if (hash === 98) {
-            status = "S";
-          } else if (hash === 99) {
-            status = "T";
-          } else {
-            status = "H";
-          }
-        }
-
-        records.push({
-          tanggal: dateIso,
-          namaGelara: gelara.name,
-          aktivitas: sheet,
-          status,
-        });
-      }
-    }
-  }
-
-  return records;
-}
-
-/**
- * Parsing CSV dari Google Sheet per sheet
- */
-function parseCsvRows(csvText: string, activityName: string, year = 2026, month = 9): NormalizedActivityRecord[] {
-  const lines = csvText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  if (lines.length < 2) return [];
-
-  const records: NormalizedActivityRecord[] = [];
-
-  let nameColIdx = 2;
-  const dateColMap: { colIdx: number; dateIso: string }[] = [];
-
-  const row0 = parseCsvLine(lines[0]);
-  const row1 = lines.length > 1 ? parseCsvLine(lines[1]) : [];
-
-  // Find NAMA column in row 0 or row 1
-  for (let i = 0; i < row0.length; i++) {
-    const cell = row0[i].trim().toUpperCase();
-    if (cell === "NAMA" || cell === "NAMA GELARA" || cell === "NAMA SANTRI") {
-      nameColIdx = i;
-      break;
-    }
-  }
-
-  // Find day numbers in row 1 (or row 0 if single header)
-  const headerToInspect = row1.length > 0 && row1.some((c) => /^[0-9]{1,2}$/.test(c.trim())) ? row1 : row0;
-  const startDataRow = headerToInspect === row1 ? 2 : 1;
-
-  for (let i = 0; i < headerToInspect.length; i++) {
-    const cell = headerToInspect[i].trim();
-    const dayNum = parseInt(cell, 10);
-    if (!isNaN(dayNum) && dayNum >= 1 && dayNum <= 31 && String(dayNum) === cell) {
-      const dateIso = `${year}-${String(month).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
-      dateColMap.push({ colIdx: i, dateIso });
-    }
-  }
-
-  // Parse data rows
-  for (let r = startDataRow; r < lines.length; r++) {
-    const rowCells = parseCsvLine(lines[r]);
-    const rawName = rowCells[nameColIdx]?.trim();
-    if (
-      !rawName ||
-      rawName.toUpperCase() === "TOTAL" ||
-      rawName.toUpperCase() === "REKAP" ||
-      rawName.toUpperCase() === "NAMA" ||
-      rawName.toUpperCase() === "NO"
-    ) {
-      continue;
-    }
-
-    const gelaraName = normalizeGelaraName(rawName);
-
-    for (const { colIdx, dateIso } of dateColMap) {
-      if (colIdx < rowCells.length) {
-        const rawStatus = rowCells[colIdx]?.trim().toUpperCase();
-        if (rawStatus && ["H", "S", "T", "I", "A"].includes(rawStatus)) {
-          records.push({
-            tanggal: dateIso,
-            namaGelara: gelaraName,
-            aktivitas: activityName,
-            status: rawStatus as ActivityStatus,
-          });
-        }
-      }
-    }
-  }
-
-  return records;
-}
-
-function parseCsvLine(line: string): string[] {
-  const result: string[] = [];
-  let inQuotes = false;
-  let current = "";
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (char === "," && !inQuotes) {
-      result.push(current);
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-  result.push(current);
-  return result;
-}
-
-export function getConfiguredSheetMap(): Record<string, string> {
-  const jsonStr = process.env.DAILY_ACTIVITY_SHEETS;
-  if (jsonStr) {
-    try {
-      const parsed = JSON.parse(jsonStr);
-      if (typeof parsed === "object" && parsed !== null) {
-        return parsed as Record<string, string>;
-      }
-    } catch (e) {
-      console.warn("[SheetConfig] Gagal parse DAILY_ACTIVITY_SHEETS JSON:", e);
-    }
-  }
-
-  const fallbackSheetId = process.env.DAILY_ACTIVITY_SHEET_ID;
-  const activePeriod = getActiveYearAndMonth();
-  if (fallbackSheetId) {
-    return { [activePeriod.monthId]: fallbackSheetId };
-  }
-
-  return {};
-}
-
-export function getActiveYearAndMonth(): { year: number; month: number; monthId: string } {
-  const envMonthId = process.env.DAILY_ACTIVITY_MONTH_ID;
-  if (envMonthId && /^\d{4}-\d{2}$/.test(envMonthId)) {
-    const [y, m] = envMonthId.split("-").map((s) => parseInt(s, 10));
-    return { year: y, month: m, monthId: envMonthId };
-  }
-
-  const envYear = process.env.DAILY_ACTIVITY_YEAR ? parseInt(process.env.DAILY_ACTIVITY_YEAR, 10) : null;
-  const envMonth = process.env.DAILY_ACTIVITY_MONTH ? parseInt(process.env.DAILY_ACTIVITY_MONTH, 10) : null;
-  if (envYear && envMonth) {
-    const monthId = `${envYear}-${String(envMonth).padStart(2, "0")}`;
-    return { year: envYear, month: envMonth, monthId };
-  }
-
-  const { year, month } = jakartaDateParts();
-  return { year, month, monthId: `${year}-${String(month).padStart(2, "0")}` };
-}
-
-/**
- * Fetch all raw activity records from configured source or sample fallback
- */
-export async function getRawDailyActivityRecords(targetMonthId?: string): Promise<{
-  records: NormalizedActivityRecord[];
-  sourceType: "google-sheet" | "excel" | "sample";
-  sheetNames: string[];
-}> {
-  const now = Date.now();
-  const cacheKey = targetMonthId || "default";
-  const cached = memoryCacheMap[cacheKey];
-  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
-    return { records: cached.data, sourceType: cached.sourceType, sheetNames: cached.sheetNames };
-  }
-
-  const sheetUrl = process.env.DAILY_ACTIVITY_SHEET_URL;
-  const sheetMap = getConfiguredSheetMap();
-
-  let activePeriod = getActiveYearAndMonth();
-  if (targetMonthId && /^\d{4}-\d{2}$/.test(targetMonthId)) {
-    const [y, m] = targetMonthId.split("-").map((s) => parseInt(s, 10));
-    activePeriod = { year: y, month: m, monthId: targetMonthId };
-  }
-
-  const sheetId = sheetMap[activePeriod.monthId] || process.env.DAILY_ACTIVITY_SHEET_ID;
-  const apiKey = process.env.GOOGLE_API_KEY;
-
-  // 1. Google Sheets API via Key
-  if (sheetId && apiKey) {
-    try {
-      let sheetsToFetch: string[] = await discoverSheetNames(sheetId);
-      if (sheetsToFetch.length === 0) {
-        sheetsToFetch = [...ACTIVITY_SHEETS];
-      }
-
-      const records: NormalizedActivityRecord[] = [];
-      const fetchPromises = sheetsToFetch.map(async (sheetName) => {
-        const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(sheetName)}?key=${apiKey}`;
-        const res = await fetch(url, { cache: "no-store" });
-        if (!res.ok) return [];
-        const json = await res.json();
-        const rows: string[][] = json.values || [];
-        if (rows.length < 2) return [];
-
-        const sheetRecords: NormalizedActivityRecord[] = [];
-        const headers = rows[0];
-        let nameIdx = headers.findIndex((h) => /nama/i.test(h));
-        if (nameIdx === -1) nameIdx = 1;
-
-        const dateCols: { colIdx: number; dateIso: string }[] = [];
-        for (let i = 0; i < headers.length; i++) {
-          const dayNum = parseInt(String(headers[i]).replace(/[^0-9]/g, ""), 10);
-          if (!isNaN(dayNum) && dayNum >= 1 && dayNum <= 31) {
-            dateCols.push({
-              colIdx: i,
-              dateIso: `${activePeriod.year}-${String(activePeriod.month).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`,
-            });
-          }
-        }
-
-        for (let r = 1; r < rows.length; r++) {
-          const row = rows[r];
-          const rawName = row[nameIdx];
-          if (!rawName) continue;
-          const gelaraName = normalizeGelaraName(rawName);
-
-          for (const { colIdx, dateIso } of dateCols) {
-            const rawStatus = row[colIdx]?.trim().toUpperCase();
-            if (rawStatus && ["H", "S", "T", "I", "A"].includes(rawStatus)) {
-              sheetRecords.push({
-                tanggal: dateIso,
-                namaGelara: gelaraName,
-                aktivitas: sheetName,
-                status: rawStatus as ActivityStatus,
-              });
-            }
-          }
-        }
-        return sheetRecords;
-      });
-
-      const results = await Promise.all(fetchPromises);
-      for (const sheetRes of results) {
-        records.push(...sheetRes);
-      }
-
-      if (records.length > 0) {
-        memoryCacheMap[cacheKey] = { timestamp: now, data: records, sourceType: "google-sheet", sheetNames: sheetsToFetch };
-        return { records, sourceType: "google-sheet", sheetNames: sheetsToFetch };
-      }
-    } catch (err) {
-      console.warn("Google Sheets API fetch failed, falling back to sample data:", err);
-    }
-  }
-
-  // 2. Google Sheets Published CSV via Sheet ID (tanpa API key)
-  //    Gunakan auto-discovery nama sheet via htmlview, fallback ke ACTIVITY_SHEETS
-  if (sheetId && !apiKey) {
-    try {
-      let sheetsToFetch: string[] = await discoverSheetNames(sheetId);
-      if (sheetsToFetch.length === 0) {
-        console.warn("[SheetDiscovery] Menggunakan daftar sheet hardcoded sebagai fallback.");
-        sheetsToFetch = [...ACTIVITY_SHEETS];
-      }
-
-      const records: NormalizedActivityRecord[] = [];
-      const fetchPromises = sheetsToFetch.map(async (sheetName) => {
-        const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
-        const res = await fetch(url, { cache: "no-store" });
-        if (!res.ok) return [];
-        const csvText = await res.text();
-        return parseCsvRows(csvText, sheetName, activePeriod.year, activePeriod.month);
-      });
-
-      const results = await Promise.all(fetchPromises);
-      for (const sheetRes of results) {
-        records.push(...sheetRes);
-      }
-
-      if (records.length > 0) {
-        memoryCacheMap[cacheKey] = { timestamp: now, data: records, sourceType: "google-sheet", sheetNames: sheetsToFetch };
-        return { records, sourceType: "google-sheet", sheetNames: sheetsToFetch };
-      }
-    } catch (err) {
-      console.warn("Google Sheets CSV fetch failed, falling back to sample data:", err);
-    }
-  }
-
-  // 3. Custom endpoint URL (e.g. Google Apps Script Web App returning JSON)
-  if (sheetUrl) {
-    try {
-      const res = await fetch(sheetUrl, { cache: "no-store" });
-      if (res.ok) {
-        const json = await res.json();
-        if (Array.isArray(json) && json.length > 0) {
-          const discovered = Array.from(new Set(json.map((r: { aktivitas?: string }) => r.aktivitas).filter(Boolean))) as string[];
-          memoryCacheMap[cacheKey] = { timestamp: now, data: json, sourceType: "google-sheet", sheetNames: discovered };
-          return { records: json, sourceType: "google-sheet", sheetNames: discovered };
-        }
-      }
-    } catch (err) {
-      console.warn("Custom Sheet URL fetch failed, falling back to sample data:", err);
-    }
-  }
-
-  // 4. Default Sample Data Fallback (September 2026)
-  const sampleRecords = generateSampleData();
-  const sampleSheets = [...ACTIVITY_SHEETS];
-  memoryCacheMap[cacheKey] = { timestamp: now, data: sampleRecords, sourceType: "sample", sheetNames: sampleSheets };
-  return { records: sampleRecords, sourceType: "sample", sheetNames: sampleSheets };
-}
-
-/**
- * Main function: Get aggregated daily activity data filtered by week, month, date, and gelara
+ * Main query facade: Get aggregated daily activity data filtered by week, month, date, and gelara
  */
 export async function getDailyActivityData(params?: {
   weekId?: string;
@@ -752,7 +182,6 @@ export async function getDailyActivityData(params?: {
     : Array.from(new Set(records.map((r) => r.aktivitas).filter(Boolean)));
   const totalSheetsCount = activeSheetNames.length;
 
-  // Determine active month
   const monthId = requestedMonthId;
   const [year, month] = monthId.split("-").map((s) => parseInt(s, 10));
 
@@ -764,7 +193,6 @@ export async function getDailyActivityData(params?: {
     month,
   };
 
-  // Extract available months dynamically from records and configured sheet map
   const monthSet = new Set<string>();
   const sheetMap = getConfiguredSheetMap();
   Object.keys(sheetMap).forEach((mId) => monthSet.add(mId));
@@ -802,9 +230,7 @@ export async function getDailyActivityData(params?: {
 
   const currentWeek = weeks.find((w) => w.id === selectedWeekId) || weeks[0];
 
-  // Unique list of all gelara names — gunakan Map untuk dedup nama yang
-  // secara visual sama tapi beda karakter tersembunyi (normalize sebagai key)
-  const gelaraNamesMap = new Map<string, string>(); // key: lowercase-stripped → value: normalized
+  const gelaraNamesMap = new Map<string, string>();
   records.forEach((r) => {
     const key = r.namaGelara.toLowerCase().replace(/\s+/g, "");
     if (!gelaraNamesMap.has(key)) {
@@ -815,18 +241,14 @@ export async function getDailyActivityData(params?: {
     a.localeCompare(b, "id")
   );
 
-  // Calculate monthly & weekly summaries for each gelara
   const gelaraSummaries: GelaraSummary[] = [];
 
   allGelaraNames.forEach((nama, idx) => {
-    // Filter records for this gelara — gunakan key-based match agar nama dengan
-    // karakter tersembunyi berbeda tetap dikenali sebagai orang yang sama
     const namaKey = nama.toLowerCase().replace(/\s+/g, "");
     const gelaraRecords = records.filter(
       (r) => r.namaGelara.toLowerCase().replace(/\s+/g, "") === namaKey
     );
 
-    // Monthly aggregation
     const monthRecords = gelaraRecords.filter((r) => r.tanggal.startsWith(monthId));
     const totalTercatatBulanan = monthRecords.length;
     const jumlahABulanan = monthRecords.filter((r) => r.status === "A").length;
@@ -837,7 +259,6 @@ export async function getDailyActivityData(params?: {
       ? Number((((totalTercatatBulanan - totalTidakHadirBulanan) / totalTercatatBulanan) * 100).toFixed(1))
       : null;
 
-    // Weekly aggregation (currentWeek.startDate <= tanggal <= currentWeek.endDate)
     const weekRecords = gelaraRecords.filter(
       (r) => r.tanggal >= currentWeek.startDate && r.tanggal <= currentWeek.endDate
     );
@@ -866,14 +287,11 @@ export async function getDailyActivityData(params?: {
     });
   });
 
-  // Extract all absent/exception records (status === 'A' | 'S' | 'I')
   let absentRecordsRaw = records.filter((r) => ["A", "S", "I"].includes(r.status));
 
-  // Apply filters to absent list if specified
   if (params?.date) {
     absentRecordsRaw = absentRecordsRaw.filter((r) => r.tanggal === params.date);
   } else {
-    // Selalu kembalikan data 1 bulan penuh agar tab client bisa berpindah antar Mingguan & Bulanan
     absentRecordsRaw = absentRecordsRaw.filter((r) => r.tanggal.startsWith(monthId));
   }
 
@@ -884,7 +302,6 @@ export async function getDailyActivityData(params?: {
     );
   }
 
-  // Sort by date ascending, then activity
   absentRecordsRaw.sort((a, b) => {
     if (a.tanggal !== b.tanggal) return a.tanggal.localeCompare(b.tanggal);
     return a.aktivitas.localeCompare(b.aktivitas);
@@ -903,7 +320,6 @@ export async function getDailyActivityData(params?: {
   const totalActivitiesCount = records.length;
   const totalAbsentCount = records.filter((r) => r.status === "A").length;
 
-  // === Statistik Per Kelas ===
   let santriUsers: { name: string; kelas: string | null }[] = [];
   try {
     const { data: usersData } = await supabase
@@ -928,8 +344,6 @@ export async function getDailyActivityData(params?: {
   const resolveKelas = (rawName: string): string => {
     const key = rawName.toLowerCase().replace(/\s+/g, "");
     if (userKeyToKelasMap.has(key)) return userKeyToKelasMap.get(key)!;
-    // Fallback toleransi jika nama di spreadsheet tidak mencantumkan nama belakang/marga
-    // (misal: "Muhammad Ichsan Alfiyan" vs "Muhammad Ichsan Alfiyan Hasibuan")
     for (const [userKey, kelas] of userKeyToKelasMap.entries()) {
       if (userKey.startsWith(key) || key.startsWith(userKey)) {
         return kelas;

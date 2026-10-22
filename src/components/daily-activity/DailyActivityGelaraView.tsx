@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { DailyActivityDataResult } from "@/services/daily-activity.service";
 
@@ -27,11 +27,12 @@ export default function DailyActivityGelaraView({
   }, [initialData.gelaraSummaries, userName]);
 
   const [selectedWeekId, setSelectedWeekId] = useState(initialData.selectedWeekId);
-  const [periodTab, setPeriodTab] = useState<"mingguan" | "bulanan">("mingguan");
-
-  useEffect(() => {
+  const [prevWeekProp, setPrevWeekProp] = useState(initialData.selectedWeekId);
+  if (prevWeekProp !== initialData.selectedWeekId) {
+    setPrevWeekProp(initialData.selectedWeekId);
     setSelectedWeekId(initialData.selectedWeekId);
-  }, [initialData.selectedWeekId]);
+  }
+  const [periodTab, setPeriodTab] = useState<"mingguan" | "bulanan">("mingguan");
 
   function handleFilterChange(params: { weekId?: string; monthId?: string }) {
     const sp = new URLSearchParams();
@@ -77,8 +78,6 @@ export default function DailyActivityGelaraView({
       </main>
     );
   }
-
-  const initial = mySummary.namaGelara.trim()?.[0]?.toUpperCase() ?? "G";
 
   const totalTidakHadirMingguan =
     mySummary.jumlahAMingguan + (mySummary.jumlahSMingguan || 0) + (mySummary.jumlahIMingguan || 0);
