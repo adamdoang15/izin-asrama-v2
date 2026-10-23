@@ -57,15 +57,7 @@ export async function setujuiIzinAction(_prev: ActionState, formData: FormData):
     const id = idSchema.safeParse(formData.get("id"));
     if (!id.success) return { error: "Pengajuan tidak ditemukan." };
 
-    const current = await getCurrentIzinStatus(id.data);
-    if (!current) return { error: "Pengajuan tidak ditemukan." };
-    if (current.status !== "MENUNGGU") return { error: "Pengajuan ini sudah diproses." };
-
-    const now = new Date();
-    const scheduledExit = new Date(current.tanggal_keluar);
-    const nextStatus = scheduledExit <= now ? "SEDANG_KELUAR" : "DISETUJUI";
-
-    const result = await approveIzin(id.data, Number(session.user.id), nextStatus);
+    const result = await approveIzin(id.data, Number(session.user.id));
     if (result.error) return { error: result.error };
 
     revalidatePath("/beranda");

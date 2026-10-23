@@ -4,17 +4,14 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { wibInputToISOString } from "@/lib/format";
-import { getDistanceInMeters, getAsramaConfig } from "@/lib/geo";
+import { verifyReturnLocation } from "@/lib/geo";
 import {
-  syncScheduledIzinStatuses,
-  checkActiveIzinConflict,
   createIzin,
   getCurrentIzinStatus,
   markIzinReturned,
-  logGagalValidasiLokasi,
   submitIzinRevision,
+  syncScheduledIzinStatuses,
 } from "@/services/izin.service";
-import { syncBlacklistStatus } from "@/services/user.service";
 
 const jenisIzinSchema = z.enum(["HARIAN", "MENGINAP", "REKREASI", "KELUARGA", "DARURAT"]);
 
@@ -74,14 +71,6 @@ export async function ajukanIzinAction(
     return { error: "Waktu keluar tidak boleh berada jauh di masa lalu." };
   }
 
-  await Promise.all([syncScheduledIzinStatuses(), syncBlacklistStatus()]);
-
-  const conflict = await checkActiveIzinConflict(Number(session.user.id), tanggalKeluarISO, perkiraanKembaliISO);
-  if (conflict.error) return { error: conflict.error };
-  if (conflict.hasConflict) {
-    return { error: "Kamu masih memiliki pengajuan/izin aktif pada rentang waktu tersebut." };
-  }
-
   const result = await createIzin(Number(session.user.id), jenis_izin, alasan, tujuan, tanggalKeluarISO, perkiraanKembaliISO);
   if (result.error) return { error: result.error };
 
@@ -119,12 +108,6 @@ export async function kirimRevisiIzinAction(
   const keluar = new Date(tanggalKeluarISO);
   const kembali = new Date(perkiraanKembaliISO);
   if (kembali <= keluar) return { error: "Perkiraan kembali harus setelah waktu keluar." };
-
-  const conflict = await checkActiveIzinConflict(Number(session.user.id), tanggalKeluarISO, perkiraanKembaliISO);
-  if (conflict.error) return { error: conflict.error };
-  if (conflict.hasConflict) {
-    return { error: "Jadwal baru ini bentrok dengan pengajuan/izin aktif Anda yang lain." };
-  }
 
   const result = await submitIzinRevision(parsed.data.id, Number(session.user.id), session.user.name ?? "Gelara", {
     jenis_izin,
@@ -175,48 +158,21 @@ export async function tandaiKembaliAction(
     return { error: "Izin ini belum berstatus sedang keluar atau disetujui." };
   }
 
-  const asrama = getAsramaConfig();
-  const distance = getDistanceInMeters(userLat, userLng, asrama.lat, asrama.lng);
-
-  // Validasi akurasi sinyal GPS
-  if (userAcc !== undefined && userAcc > asrama.maxAccuracyMeters) {
-    const errorMsg = `Sinyal GPS kurang akurat (akurasi ±${Math.round(userAcc)} meter, batas maksimal ${asrama.maxAccuracyMeters} meter). Coba dekati jendela atau area terbuka di asrama, lalu coba lagi.`;
-    await logGagalValidasiLokasi(id.data, Number(session.user.id), "Sinyal GPS kurang akurat", {
-      latitude: userLat,
-      longitude: userLng,
-      distance,
-      accuracy: userAcc,
-    });
-    return { error: errorMsg };
-  }
-
-  // Validasi batas radius asrama
-  if (distance > asrama.radiusMeters) {
-    const errorMsg = `Gagal mencatat kepulangan. Anda berada di luar radius asrama (jarak terdeteksi: ${distance} meter, batas radius: ${asrama.radiusMeters} meter). Pastikan Anda sudah berada di area asrama.`;
-    await logGagalValidasiLokasi(id.data, Number(session.user.id), "Di luar radius asrama", {
-      latitude: userLat,
-      longitude: userLng,
-      distance,
-      accuracy: userAcc,
-    });
-    return { error: errorMsg };
-  }
-
-  const now = new Date();
-  const batasKembali = new Date(izin.perkiraan_kembali);
-  const lateMs = Math.max(0, now.getTime() - batasKembali.getTime());
-  const lateMinutes = Math.ceil(lateMs / 60000);
-  const returnStatus = lateMinutes > 0 ? "TERLAMBAT" : "TEPAT_WAKTU";
-  const returnedAt = now.toISOString();
+  const geo = await verifyReturnLocation(id.data, Number(session.user.id), {
+    latitude: userLat,
+    longitude: userLng,
+    accuracy: userAcc,
+  });
+  if (!geo.success) return { error: geo.error };
 
   const result = await markIzinReturned(
     id.data,
     Number(session.user.id),
-    returnedAt,
-    returnStatus,
-    lateMinutes,
+    undefined,
+    undefined,
+    undefined,
     session.user.name ?? "Gelara",
-    { latitude: userLat, longitude: userLng, distance, accuracy: userAcc }
+    geo.locationInfo
   );
   if (result.error) return { error: result.error };
 
