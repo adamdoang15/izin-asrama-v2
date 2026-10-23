@@ -391,9 +391,10 @@ export async function createIzin(
   });
 
   // Trigger push notification to all Pengurus
+  const namaSantri = user?.name || "Gelara";
   await sendNotificationToPengurus({
     title: "Pengajuan Izin Baru",
-    body: `Ada pengajuan izin baru (${jenis_izin}) untuk alasan: ${alasan}`,
+    body: `Ada pengajuan izin baru dari ${namaSantri} (${jenis_izin}) untuk alasan: ${alasan}`,
     url: "/beranda",
   }).catch((err) => console.error("Gagal mengirim notifikasi pengajuan:", err));
 
@@ -648,20 +649,36 @@ export async function logGagalValidasiLokasi(
 export async function markIzinReturned(
   id: number,
   userId: number,
-  returnedAt: string,
-  returnStatus: "TEPAT_WAKTU" | "TERLAMBAT",
-  lateMinutes: number,
-  santriName: string,
+  returnedAt?: string,
+  returnStatus?: "TEPAT_WAKTU" | "TERLAMBAT",
+  lateMinutes?: number,
+  santriName?: string,
   locationInfo?: { latitude: number; longitude: number; distance: number; accuracy?: number }
 ): Promise<{ error?: string }> {
+  const now = new Date();
+  const finalReturnedAt = returnedAt || now.toISOString();
+
+  let finalLateMinutes = lateMinutes;
+  let finalReturnStatus = returnStatus;
+
+  // Single source of truth kalkulasi keterlambatan jika belum disediakan
+  if (finalLateMinutes === undefined || finalReturnStatus === undefined) {
+    const current = await getCurrentIzinStatus(id);
+    if (!current) return { error: "Pengajuan tidak ditemukan." };
+    const batasKembali = new Date(current.perkiraan_kembali);
+    const lateMs = Math.max(0, now.getTime() - batasKembali.getTime());
+    finalLateMinutes = Math.ceil(lateMs / 60000);
+    finalReturnStatus = finalLateMinutes > 0 ? "TERLAMBAT" : "TEPAT_WAKTU";
+  }
+
   const { error } = await supabase
     .from("izin")
     .update({
       status: "SUDAH_KEMBALI",
-      returned_at: returnedAt,
-      return_status: returnStatus,
-      late_minutes: lateMinutes,
-      updated_at: returnedAt,
+      returned_at: finalReturnedAt,
+      return_status: finalReturnStatus,
+      late_minutes: finalLateMinutes,
+      updated_at: finalReturnedAt,
     })
     .eq("id", id)
     .eq("user_id", userId)
@@ -669,7 +686,8 @@ export async function markIzinReturned(
 
   if (error) return { error: `Gagal mencatat kepulangan: ${error.message}` };
 
-  const statusCatatan = returnStatus === "TERLAMBAT" ? `Terlambat ${lateMinutes} menit.` : "Kembali tepat waktu.";
+  const isTerlambat = finalReturnStatus === "TERLAMBAT" && (finalLateMinutes ?? 0) > 0;
+  const statusCatatan = isTerlambat ? `Terlambat ${finalLateMinutes} menit.` : "Kembali tepat waktu.";
   const accText = locationInfo?.accuracy !== undefined ? `, Akurasi: ±${Math.round(locationInfo.accuracy)}m` : "";
   const locationCatatan = locationInfo
     ? ` [Lokasi GPS: ${locationInfo.latitude.toFixed(6)}, ${locationInfo.longitude.toFixed(6)} (Jarak: ${locationInfo.distance}m${accText})]`
@@ -685,14 +703,16 @@ export async function markIzinReturned(
   });
 
   // Trigger push notification to all Pengurus
-  const statusText =
-    returnStatus === "TERLAMBAT"
-      ? `terlambat ${lateMinutes} menit`
-      : "tepat waktu";
+  const statusText = isTerlambat
+    ? `terlambat ${finalLateMinutes} menit`
+    : "tepat waktu";
+  const notifTitle = isTerlambat
+    ? "Gelara Kembali Terlambat"
+    : "Gelara Sudah Kembali";
 
   await sendNotificationToPengurus({
-    title: "Gelara Sudah Kembali",
-    body: `${santriName} telah kembali ke asrama (${statusText}).`,
+    title: notifTitle,
+    body: `${santriName || "Gelara"} telah kembali ke asrama (${statusText}).`,
     url: "/beranda",
   }).catch((err) => console.error("Gagal mengirim notifikasi kepulangan:", err));
 
@@ -732,7 +752,8 @@ export async function markIzinReturnedByPengurus(
 
   if (error) return { error: `Gagal menandai kepulangan: ${error.message}` };
 
-  const statusCatatan = returnStatus === "TERLAMBAT" ? `Terlambat ${lateMinutes} menit.` : "Kembali tepat waktu.";
+  const isTerlambat = returnStatus === "TERLAMBAT" && lateMinutes > 0;
+  const statusCatatan = isTerlambat ? `Terlambat ${lateMinutes} menit.` : "Kembali tepat waktu.";
 
   await supabase.from("izin_logs").insert({
     izin_id: id,
@@ -742,6 +763,13 @@ export async function markIzinReturnedByPengurus(
     new_status: "SUDAH_KEMBALI",
     catatan: `Ditandai kembali manual oleh Pengurus (${adminName}): "${alasan}". ${statusCatatan}`,
   });
+
+  const statusText = isTerlambat ? `terlambat ${lateMinutes} menit` : "tepat waktu";
+  await sendNotificationToUser(izin.user_id, {
+    title: isTerlambat ? "Kepulangan Ditandai Terlambat" : "Kepulangan Dikonfirmasi Petugas",
+    body: `Petugas (${adminName}) menandai kepulangan Anda (${statusText}). Alasan: ${alasan}`,
+    url: "/beranda",
+  }).catch((err) => console.error("Gagal mengirim notifikasi kepulangan manual ke santri:", err));
 
   return {};
 }
